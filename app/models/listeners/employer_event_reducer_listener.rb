@@ -21,7 +21,7 @@ module Listeners
     end
 
     def process_retrieved_resource(delivery_info, employer_id, event_resource, m_headers, event_name, event_time, trading_partner_publishable)
-      resource_event_broadcast("info", "event_stored", "200", event_resource, m_headers.merge({:event_name => event_name, :event_time => event_time.to_i.to_s}))
+      resource_event_broadcast("info", "event_stored", "200", event_resource, m_headers.merge({:event_name => event_name, :event_time => event_time.to_i.to_s, :is_trading_partner_publishable => trading_partner_publishable}))
 
       EmployerEvent.store_and_yield_deleted(employer_id, event_name, event_time, event_resource, trading_partner_publishable) do |destroyed_event|
         resource_event_broadcast("info", "event_reduced", "200", destroyed_event.resource_body, {
