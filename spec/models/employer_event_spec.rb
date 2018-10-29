@@ -6,14 +6,10 @@ describe EmployerEvent, :dbclean => :after_each do
     let!(:plan_year_start_date) { Date.new(2017, 4, 1) }
     let!(:new_plan_year_end_date) { Date.new(2017, 12, 31) }
     let!(:plan_year_end_date) {Date.new(2018, 03, 31)}
-    let!(:employer_id) { 1234 }
     let(:event_name) { "benefit_coverage_period_terminated_voluntary" }
     let(:event_time) { Time.now }
-
     let!(:employer) { FactoryGirl.create(:employer)}
     let!(:plan_year) { FactoryGirl.create(:plan_year, start_date: plan_year_start_date, end_date: plan_year_end_date, employer_id: employer.id)}
-
-    let(:first_plan_year_record) { FactoryGirl.create(:plan_year, :start_date => first_plan_year_start_date, :end_date => nil)}
 
     let(:employer_event_xml) do
       <<-XML_CODE
