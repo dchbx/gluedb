@@ -8,7 +8,6 @@ class EmployerEvent
   field :event_name, type: String
   field :resource_body, type: String
   field :employer_id, type: String
-  field :is_trading_partner_publishable, type: Boolean, default: true
 
   XML_NS = "http://openhbx.org/api/terms/1.0"
 
@@ -22,12 +21,11 @@ class EmployerEvent
     self.where(:event_name => EmployerEvents::EventNames::FIRST_TIME_EMPLOYER_EVENT_NAME, :employer_id => new_employer_id).any?
   end
 
-  def self.create_new_event_and_remove_old(new_employer_id, new_event_name, new_event_time, new_payload, trading_partner_publishable, match_criteria)
+  def self.create_new_event_and_remove_old(new_employer_id, new_event_name, new_event_time, new_payload, match_criteria)
     new_event = self.create!({
       employer_id: new_employer_id,
       event_name: new_event_name,
       event_time: new_event_time,
-      is_trading_partner_publishable: trading_partner_publishable,
       resource_body: new_payload
     })
     self.where(match_criteria.merge({:_id => {"$ne" => new_event._id}})).each do |old_record|
@@ -36,7 +34,7 @@ class EmployerEvent
     end
   end
 
-  def self.store_and_yield_deleted(new_employer_id, new_event_name, new_event_time, new_payload, trading_partner_publishable)
+  def self.store_and_yield_deleted(new_employer_id, new_event_name, new_event_time, new_payload)
     employer_importer = ::EmployerEvents::EmployerImporter.new(new_payload)
     employer_importer.persist
     if not_yet_seen_by_carrier?(new_employer_id) || (new_event_name == EmployerEvents::EventNames::FIRST_TIME_EMPLOYER_EVENT_NAME)
@@ -47,7 +45,6 @@ class EmployerEvent
         EmployerEvents::EventNames::FIRST_TIME_EMPLOYER_EVENT_NAME,
         latest_time,
         new_payload,
-        trading_partner_publishable,
         {:employer_id => new_employer_id}) do |old_record|
           yield old_record
       end
@@ -57,7 +54,6 @@ class EmployerEvent
         new_event_name,
         new_event_time,
         new_payload,
-        trading_partner_publishable,
         {:employer_id => new_employer_id, :event_name => new_event_name}) do |old_record|
           yield old_record
       end
@@ -79,7 +75,7 @@ class EmployerEvent
   end
 
   def self.execute_pending_enrollment_requests(connection, boundry_time = Time.now)
-    events = self.where(event_time: {"$lt" => boundry_time}, is_trading_partner_publishable: true).order_by(event_time: 1)
+    events = self.where(event_time: {"$lt" => boundry_time}).order_by(event_time: 1)
     trigger = EmployerEvents::EnrollmentEventTrigger.new
     events.each do |event|
       trigger.add(event)
@@ -88,7 +84,7 @@ class EmployerEvent
   end
 
   def self.with_digest_payloads(boundry_time = Time.now)
-    events = self.where(event_time: {"$lt" => boundry_time}, is_trading_partner_publishable: true).order_by(event_time: 1)
+    events = self.where(event_time: {"$lt" => boundry_time}).order_by(event_time: 1)
     carrier_files = Carrier.all.map do |car|
       EmployerEvents::CarrierFile.new(car)
     end
@@ -107,7 +103,7 @@ class EmployerEvent
   end
 
   def self.get_all_digests
-    events = self.where(is_trading_partner_publishable: true).order_by(event_time: 1)
+    events = self.order_by(event_time: 1)
     carrier_files = Carrier.all.map do |car|
       EmployerEvents::CarrierFile.new(car)
     end
