@@ -38,7 +38,16 @@ class EmployerEvent
     employer_importer = ::EmployerEvents::EmployerImporter.new(new_payload)
     employer_importer.persist
 
-    return unless trading_partner_publishable  # Don't store trading partner unpublishable events and return here.
+    unless trading_partner_publishable  # Don't store trading partner unpublishable event
+      trading_partner_unpublishable_event = self.new({
+                                   employer_id: new_employer_id,
+                                   event_name: new_event_name,
+                                   event_time: new_event_time,
+                                   resource_body: new_payload
+                               })
+      yield trading_partner_unpublishable_event # reduce trading partner unpublishable event and return here.
+      return
+    end
 
     if not_yet_seen_by_carrier?(new_employer_id) || (new_event_name == EmployerEvents::EventNames::FIRST_TIME_EMPLOYER_EVENT_NAME)
       latest_time = ([new_event_time] + self.where(:employer_id => new_employer_id).map(&:event_time)).max

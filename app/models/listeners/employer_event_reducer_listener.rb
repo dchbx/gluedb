@@ -27,7 +27,8 @@ module Listeners
         resource_event_broadcast("info", "event_reduced", "200", destroyed_event.resource_body, {
           :employer_id => destroyed_event.employer_id,
           :event_name => destroyed_event.event_name,
-          :event_time => destroyed_event.event_time.to_i.to_s
+          :event_time => destroyed_event.event_time.to_i.to_s,
+          :is_trading_partner_publishable => trading_partner_publishable
         })
       end
       channel.ack(delivery_info.delivery_tag, false)
