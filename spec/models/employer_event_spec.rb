@@ -8,6 +8,7 @@ describe EmployerEvent, :dbclean => :after_each do
     let!(:plan_year_end_date) {Date.new(2018, 03, 31)}
     let(:event_name) { "benefit_coverage_period_terminated_voluntary" }
     let(:event_time) { Time.now }
+    let(:event) { double}
     let!(:employer) { FactoryGirl.create(:employer)}
     let!(:plan_year) { FactoryGirl.create(:plan_year, start_date: plan_year_start_date, end_date: plan_year_end_date, employer_id: employer.id)}
 
@@ -34,7 +35,8 @@ describe EmployerEvent, :dbclean => :after_each do
 
     before do
       employer.plan_years << plan_year
-      EmployerEvent.store_and_yield_deleted(employer.hbx_id, event_name, event_time, employer_event_xml, trading_partner_publishable)
+      EmployerEvent.store_and_yield_deleted(employer.hbx_id, event_name, event_time, employer_event_xml, trading_partner_publishable) do |event |
+      end
     end
 
     context "with trading_partner_publishable = true" do
