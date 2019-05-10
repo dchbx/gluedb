@@ -84,10 +84,12 @@ describe EnrollmentAction::DependentDropAndAdd, "given a qualified enrollment se
   end
 
   it 'should add the other dependent' do 
+    allow(enrollee_primary).to receive(:benefit).and_return(benefit_add)
+    allow(benefit_add).to receive(:premium_amount).and_return( "100.11")
+    allow(enrollee_secondary).to receive(:benefit).and_return(benefit_add)
     allow(enrollee_primary).to receive(:subscriber?).and_return(enrollee_primary.is_subscriber)
     allow(enrollee_secondary).to receive(:subscriber?).and_return(enrollee_secondary.is_subscriber)
     allow(enrollee_new).to receive(:subscriber?).and_return(enrollee_new.is_subscriber)
-
 
     policy_updater_add.persist
     policy.reload
