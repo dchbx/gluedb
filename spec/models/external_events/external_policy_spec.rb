@@ -136,6 +136,13 @@ describe ExternalEvents::ExternalPolicy, "given:
         expect(Policy.where(eg_id: "rspec-eg-id").first.enrollees.exists?).to eq true
         expect(Policy.where(eg_id: "rspec-eg-id").first.responsible_party_id).to eq responsible_party.id
       end
+      
+      context '#created_policy' do 
+        it 'finds the created policy after persistance' do 
+          subject.persist  
+          expect(subject.created_policy.class).to eq(Policy)
+        end
+      end
     end
   end
 end

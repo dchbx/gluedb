@@ -23,7 +23,9 @@ module EnrollmentAction
         return false
       end
       ep = ExternalEvents::ExternalPolicy.new(action.policy_cv, action.existing_plan, action.is_cobra?, market_from_payload: action.kind)
-      ep.persist
+      persistance_result = ep.persist
+      ::Listeners::PolicyUpdatedObserver.notify(ep.created_policy)
+      persistance_result
     end
 
     def publish

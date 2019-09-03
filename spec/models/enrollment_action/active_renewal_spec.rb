@@ -150,8 +150,8 @@ describe EnrollmentAction::ActiveRenewal, "#persist" do
   let(:member) { instance_double(Openhbx::Cv2::EnrolleeMember, id: 1) }
   let(:enrollee) { instance_double(::Openhbx::Cv2::Enrollee, :member => member) }
 
-  let(:plan) { instance_double(Plan, :id => 1) }
-  let(:policy_cv) { instance_double(Policy, :enrollees => [enrollee]) }
+  let(:plan) { instance_double(Plan, :id => 1, year: Date.today.year, coverage_type: "health") }
+  let(:policy_cv) { instance_double(Policy, :enrollees => [enrollee], market: "individual", plan: plan ) }
 
   let(:action) { instance_double(
     ::ExternalEvents::EnrollmentEventNotification,
@@ -169,6 +169,8 @@ describe EnrollmentAction::ActiveRenewal, "#persist" do
     allow(ExternalEvents::ExternalPolicy).to receive(:new).with(policy_cv, plan, false, market_from_payload: subject.action).and_return(policy_updater)
     allow(subject.action).to receive(:kind).and_return(action)
     allow(policy_updater).to receive(:persist).and_return(true)
+    allow(policy_updater).to receive(:created_policy).and_return(policy_cv)
+    allow(::Listeners::PolicyUpdatedObserver).to receive(:broadcast).and_return(nil)
   end
 
   context "successfuly persisted" do

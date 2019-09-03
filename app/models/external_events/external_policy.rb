@@ -212,6 +212,11 @@ module ExternalEvents
       responsible_person.responsible_parties.first if responsible_party_exists?
     end
 
+    #returns the created policy after persistance
+    def created_policy
+      Policy.where(eg_id: extract_enrollment_group_id(@policy_node)).first
+    end
+
     def persist
       return true if policy_exists?
 
