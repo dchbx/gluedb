@@ -53,6 +53,7 @@ class Policy
   validates_presence_of :plan_id
 
   embeds_many :aptc_credits
+  embeds_many :federal_transmissions
   embeds_many :aptc_maximums
   embeds_many :cost_sharing_variants
 
@@ -68,6 +69,10 @@ class Policy
   belongs_to :plan, counter_cache: true, index: true
   belongs_to :employer, counter_cache: true, index: true
   belongs_to :responsible_party
+
+  has_many :legacy_cv_transactions,
+            class_name: "Protocols::LegacyCv::LegacyCvTransaction",
+            order: { submitted_at: :desc }
 
   has_many :transaction_set_enrollments,
               class_name: "Protocols::X12::TransactionSetEnrollment",

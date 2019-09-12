@@ -23,13 +23,13 @@
     <dl class="dl-horizontal">
       <dt><%= model_class.human_attribute_name(:sender) %>:</dt>
       <% if !@edi_transmission.sender.nil? %>
-        <dd><%= link_to @edi_transmission.sender.name, carrier_path(@edi_transmission.sender) %></dd>
+	      <dd><%= @edi_transmission.sender.name %></dd>
       <% else %>
         <dd>N/A</dd>
       <% end %>
       <dt><%= model_class.human_attribute_name(:receiver) %>:</dt>
       <% if !@edi_transmission.receiver.nil? %>
-      <dd><%= link_to @edi_transmission.receiver.name, carrier_path(@edi_transmission.receiver) %></dd>
+      <dd><%= @edi_transmission.receiver.name %></dd>
       <% else %>
       <dd>N/A</dd>
       <% end %>

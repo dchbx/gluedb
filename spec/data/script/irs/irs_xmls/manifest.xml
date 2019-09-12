@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<BatchHandlingServiceRequest xmlns:ns3="http://hix.cms.gov/0.1/hix-core" 
+                             xmlns:ns4="http://birsrep.dsh.cms.gov/extension/1.0" 
+                             xmlns:ns5="http://niem.gov/niem/niem-core/2.0" 
+                             xmlns="http://birsrep.dsh.cms.gov/exchange/1.0" 
+                             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+                             xsi:schemaLocation="http://birsrep.dsh.cms.gov/exchange/1.0 ../XMLschemas/constraint/XMLschemas/exchange/ExchangeModel.xsd">
+  <ns3:BatchMetadata>
+    <ns3:BatchID>2017-02-08T14:00:00Z</ns3:BatchID>
+    <ns3:BatchPartnerID>02.DC*.SBE.001.001</ns3:BatchPartnerID>
+    <ns3:BatchAttachmentTotalQuantity>1</ns3:BatchAttachmentTotalQuantity>
+    <ns4:BatchCategoryCode>IRS_EOY_REQ</ns4:BatchCategoryCode>
+    <ns3:BatchTransmissionQuantity>1</ns3:BatchTransmissionQuantity>
+  </ns3:BatchMetadata>
+  <ns3:TransmissionMetadata>
+    <ns3:TransmissionAttachmentQuantity>1</ns3:TransmissionAttachmentQuantity>
+    <ns3:TransmissionSequenceID>1</ns3:TransmissionSequenceID>
+  </ns3:TransmissionMetadata>
+  <ns4:ServiceSpecificData>
+    <ns4:ReportPeriod>
+      <ns5:Year>2016</ns5:Year>
+    </ns4:ReportPeriod>
+  </ns4:ServiceSpecificData>
+  <ns4:Attachment>
+    <ns5:DocumentBinary>
+      <ns3:ChecksumAugmentation>
+        <ns3:MD5ChecksumText>afccaf15db5699940e0b2dd3bb460a6b</ns3:MD5ChecksumText>
+      </ns3:ChecksumAugmentation>
+      <ns3:BinarySizeValue>12345678</ns3:BinarySizeValue>
+    </ns5:DocumentBinary>
+    <ns5:DocumentFileName>EOY_Request_00001_20170207T023936000Z.xml</ns5:DocumentFileName>
+    <ns5:DocumentSequenceID>00001</ns5:DocumentSequenceID>
+  </ns4:Attachment>
+</BatchHandlingServiceRequest>

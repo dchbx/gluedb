@@ -26,6 +26,7 @@ describe Policy, :dbclean => :after_each do
     :employer,
     :responsible_party,
     :transaction_set_enrollments,
+    :federal_transmissions,
     :premium_payments
   ].each do |attribute|
     it { should respond_to attribute }

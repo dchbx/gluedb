@@ -28,6 +28,7 @@
               != active_menu_item("Effective Date Change", new_effective_date_change_path) if can? :edit, @user
               != active_menu_item("Bulk Silent Policy Cancels", new_mass_silent_cancel_path) if can? :edit, @user
               != active_menu_item("Bulk Terminates", new_bulk_terminate_path) if can? :edit, @user
+              != active_menu_item("Payment Processor Transactions", legacy_cv_transactions_path) if can? :edit, @user
           - if current_user
             %li.dropdown
               %a.dropdown-toggle{"data-toggle" => "dropdown", href: "#"}

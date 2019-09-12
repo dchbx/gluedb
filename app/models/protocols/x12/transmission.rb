@@ -84,11 +84,11 @@ class Protocols::X12::Transmission
   end
 
   def sender
-    Carrier.elem_match(carrier_profiles: {fein: ic_sender_id.strip }).first
+    TradingPartner.elem_match(trading_profiles: {profile_code: ic_sender_id.strip }).first
   end
 
   def receiver
-    Carrier.elem_match(carrier_profiles: {fein: ic_receiver_id.strip }).first
+    TradingPartner.elem_match(trading_profiles: {profile_code: ic_receiver_id.strip }).first
   end
 
   def acknowledge!(the_date)

@@ -61,7 +61,6 @@ module Parsers
         isa = top_doc["ISA"]
         gs = top_doc["GS"]
         sender_id = isa[6].strip
-        @carrier = @import_cache.lookup_carrier_fein(sender_id)
         Protocols::X12::Transmission.create!({
           :isa06 => sender_id,
           :isa08 => isa[8].strip,
@@ -87,7 +86,6 @@ module Parsers
 
         # Carrier
         carrier = @import_cache.lookup_carrier_fein(etf.carrier_fein)
-        carrier ||= @carrier
 
         # Employer
         employer = nil

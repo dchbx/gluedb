@@ -1,3 +1,4 @@
+<div class='container-fluid'>
 <% if transactions.count < 1 %>
   <div class="row"><div class="col-md-offset-1 col-md-2"><p>None found</p></div></div>
 <% else %>
@@ -8,7 +9,7 @@
         <th>Type</th>
         <th>State</th>
         <th>Submitted at</th>
-        <th>Ack/Nak at</th>
+        <th>Location</th>
         <% if can? :read, current_user %>
           <th>Action</th>
         <% end %>
@@ -18,18 +19,12 @@
       <% transactions.each do |trans| %>
       <tr>
         <td><span class="fui-export">&nbsp;</span> <%= trans.transaction_kind.humanize %></td>
-        <td><%= trans_aasm_state(trans) %></td>
+        <td class='capitalize-text'><%= trans_aasm_state(trans) %></td>
         <td><%= trans.submitted_at.to_s %></td>
-        <td><%= trans.ack_nak_processed_at.to_date unless trans.ack_nak_processed_at.blank? %></td>
+        <td><%= truncate(trans.location, length: 25, omission: "...") %></td>
         <td>
           <% if can? :read, current_user %>
-            <% if trans.kind_of?(Protocols::X12::TransactionSetHeader) %>
-              <%= link_to "View detail", edi_transaction_set_path(trans) %>
-            <% elsif trans.kind_of?(Protocols::Csv::CsvTransaction) %>
-              <%= link_to "View detail", csv_transaction_path(trans) %>
-            <% else %>
-              &nbsp;
-            <% end %>
+            <%= link_to 'View Details', legacy_cv_transaction_path(trans) %>
           <% end %>
         </td>
       </tr>
@@ -38,3 +33,4 @@
   </table>
   </div>
 <% end %>
+</div>

@@ -1,3 +1,21 @@
-// Place all the styles related to the api/v1/people controller here.
-// They will automatically be included in application.css.
-// You can use Sass (SCSS) here: http://sass-lang.com/
+.capitalize-text {
+  text-transform: capitalize;
+}
+
+ .nav-item {
+  border: 1px solid #ddd;
+}
+
+ .nav-link-color {
+  color: #428bca !important;
+}
+
+ .nav-tabs > li > a:focus {
+  background-color: #428bca;
+  color: white;
+}
+
+ .nav-tabs.nav-justified > .active {
+  background-color: #f3f4f5;
+  color: #34495e !important;
+}

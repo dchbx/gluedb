@@ -22,10 +22,15 @@ module Parsers
 
       def parse_response
         ta1_seg = @result["TA1s"].first
+        if ta1_seg.blank?
+          @has_data = false
+          return nil
+        end
         @accepted = ["A", "E"].include?(ta1_seg[4])
         @isa13 = ta1_seg[1]
         @isa09 = ta1_seg[2]
         @isa10 = ta1_seg[3]
+        @has_data = true
       end
 
       def accepted?
@@ -33,6 +38,7 @@ module Parsers
       end
 
       def persist!
+        return nil unless @has_data
         transmission = Protocols::X12::Transmission.where(
           :isa13 => @isa13,
           :isa08 => @sender_id
