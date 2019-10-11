@@ -43,13 +43,6 @@ describe ::FederalReports::ReportUploader, :dbclean => :after_each do
       expect(File).not_to exist(xml_file) 
     end
 
-    it 'reaches end of upload to remove processed ReportingEligibilityUpdateds' do
-      allow(subject).to receive(:remove_tax_docs).and_return(true)
-      ::PolicyEvents::ReportingEligibilityUpdated.create!(status: "processed")
-      subject.upload(params)
-      expect(::PolicyEvents::ReportingEligibilityUpdated.count).to eq(0)
-    end
-
     it 'returns a ReportUploadError if something goes wrong'do
       allow(subject).to receive(:remove_tax_docs).and_raise(exception)
       expect { subject.upload(params) }.to raise_error(FederalReports::ReportUploadError)

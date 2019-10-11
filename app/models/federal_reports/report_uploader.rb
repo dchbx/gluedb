@@ -58,7 +58,6 @@ module FederalReports
           upload_h41(@xml_file, "tax-documents")
           persist_new_doc
           remove_tax_docs
-          ::PolicyEvents::ReportingEligibilityUpdated.where(status: "processed").delete_all
         rescue Exception => e
           raise FederalReports::ReportUploadError.new(params[:policy_id], e.message)
         end
