@@ -10,9 +10,10 @@ module EnrollmentAction
     end
 
     def persist
-      if termination.existing_policy
-        @existing_policy = termination.existing_policy
-        return @existing_policy.terminate_as_of(termination.subscriber_end)
+      @existing_policy = Policy.where(hbx_enrollment_ids: termination.policy_cv.previous_policy_id).first
+      if existing_policy.present? && existing_policy.terminate_as_of(termination.subscriber_end)
+        existing_policy.hbx_enrollment_ids << termination.hbx_enrollment_id
+        existing_policy.save!
       else
         false
       end

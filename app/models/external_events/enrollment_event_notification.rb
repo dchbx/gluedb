@@ -65,12 +65,8 @@ module ExternalEvents
         :enrollment_action_uri => enrollment_action
       )
       if found_event.any?
-        if is_reterm_with_earlier_date?
-          false
-        else
-          response_with_publisher do |result_publisher|
-            result_publisher.drop_already_processed!(self)
-          end
+        response_with_publisher do |result_publisher|
+          result_publisher.drop_already_processed!(self)
         end
       else
         false
@@ -186,7 +182,7 @@ module ExternalEvents
           return
         end
       end
-      @bogus_termination = existing_policy.nil?
+      @bogus_termination = (is_reterm_with_earlier_date? || existing_policy.nil?)
     end
 
     def check_and_mark_duplication_against(other)
@@ -285,10 +281,27 @@ module ExternalEvents
       extract_enrollee_start(subscriber) >= extract_enrollee_end(subscriber)
     end
 
-    def is_reterm_with_earlier_date? # terminating policy again with earlier termination date
-      return false unless (enrollment_action == "urn:openhbx:terms:v1:enrollment#terminate_enrollment")
-      return false unless extract_enrollee_end(subscriber).present?
-      (existing_policy.present? && existing_policy.terminated? && existing_policy.policy_end > extract_enrollee_end(subscriber))
+    def is_reterm_with_earlier_date? # terminating policy again with earlier or later date, but not with future date.
+      return false unless is_termination?
+      return false unless subscriber_end.present?
+      return false if subscriber_end > Date.today
+      return false unless policy_cv.previous_policy_id.present?
+
+      existing_policy = Policy.where(hbx_enrollment_ids: policy_cv.previous_policy_id).first
+      return false unless (existing_policy.present? && existing_policy.terminated?)
+      return false unless ((existing_policy.subscriber.m_id == subscriber_id) && (subscriber_start >= existing_policy.policy_start))
+
+      member_date_map = {}
+      policy_cv.enrollees.map { |en| member_date_map[extract_member_id(en)] = extract_enrollee_start(en)}
+
+      if all_member_ids.all? { |m_id| existing_policy.enrollees.map(&:m_id).include?(m_id) }
+        all_member_ids.all? do |mem_id|
+          en = existing_policy.enrollees.select{|en| en.m_id == mem_id}.first
+          member_date_map[mem_id] >= en.coverage_start
+        end
+      else
+        false
+      end
     end
 
     def enrollment_action
@@ -405,11 +418,7 @@ module ExternalEvents
       return false if existing_policy.blank?
       return true if existing_policy.canceled?
       if existing_policy.terminated?
-        if is_reterm_with_earlier_date?
-          false
-        else
-          !is_cancel?
-        end
+        !is_cancel?
       else
         false
       end
