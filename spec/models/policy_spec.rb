@@ -623,4 +623,14 @@ describe '.terminate_as_of', :dbclean => :after_each do
       expect(policy.aasm_state).to eq "canceled"
     end
   end
+
+  context 'should not update end date' do
+    let(:coverage_end) { Date.today.end_of_month }
+    let!(:update_policy) {policy.enrollees.first.update_attributes(coverage_end: Date.new(2014, 1, 31))}
+    it 'should cancel the policy with start date.' do
+      policy.terminate_as_of(coverage_end)
+      expect(policy.policy_end).to eq Date.new(2014, 1, 31)
+      expect(policy.aasm_state).to eq "terminated"
+    end
+  end
 end

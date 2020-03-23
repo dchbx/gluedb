@@ -1,6 +1,6 @@
 require "rails_helper"
 
-describe ::ExternalEvents::EnrollmentEventNotification do
+describe ::ExternalEvents::EnrollmentEventNotification, :dbclean => :after_each do
   let(:m_tag) { double('m_tag') }
   let(:t_stamp) { double('t_stamp') }
   let(:e_xml) { double('e_xml') }
@@ -163,11 +163,19 @@ describe ::ExternalEvents::EnrollmentEventNotification do
       context 'an enrollment that is not coverage starter' do
         let(:other) { double :is_coverage_starter? => false }
 
-        before { allow(enrollment_event_notification).to receive('existing_policy').and_return(nil) }
+        before do
+          allow(enrollment_event_notification).to receive('existing_policy').and_return(nil)
+          allow(enrollment_event_notification).to receive(:is_reterm_with_earlier_date?).and_return(false)
+        end
 
         it 'sets @bogus_termination to existing_policy.nil?' do
           subject
           expect(enrollment_event_notification).to have_received('existing_policy')
+        end
+
+        it 'sets @bogus_termination to is_reterm_with_earlier_date?' do
+          subject
+          expect(enrollment_event_notification).to have_received('is_reterm_with_earlier_date?')
         end
       end
     end
@@ -550,7 +558,6 @@ describe ExternalEvents::EnrollmentEventNotification, "that is termination with 
     allow(subject).to receive(:is_termination?).and_return(true)
     allow(subject).to receive(:is_cancel?).and_return(false)
     allow(subject).to receive(:existing_policy).and_return(existing_policy)
-    allow(subject).to receive(:is_reterm_with_earlier_date?).and_return(false)
   end
 
   it "is an already processed termination" do
@@ -572,7 +579,6 @@ describe ExternalEvents::EnrollmentEventNotification, "that is a cancel with a t
 
   before :each do
     allow(subject).to receive(:is_termination?).and_return(true)
-    allow(subject).to receive(:is_reterm_with_earlier_date?).and_return(false)
     allow(subject).to receive(:is_cancel?).and_return(true)
     allow(subject).to receive(:existing_policy).and_return(existing_policy)
   end
@@ -606,73 +612,61 @@ describe ExternalEvents::EnrollmentEventNotification, "that is a term with an ac
   end
 end
 
-
-describe ExternalEvents::EnrollmentEventNotification, "that is termination with a terminated enrollment with earlier end date" do
-  let(:m_tag) { double('m_tag') }
-  let(:t_stamp) { double('t_stamp') }
-  let(:e_xml) { double('e_xml') }
-  let(:headers) { double('headers') }
-  let(:responder) { instance_double('::ExternalEvents::EventResponder') }
-  let(:existing_policy) { instance_double(Policy, :canceled? => false, :terminated? => true) }
-
-  subject do
-    ::ExternalEvents::EnrollmentEventNotification.new responder, m_tag, t_stamp, e_xml, headers
-  end
-
-  before :each do
-    allow(subject).to receive(:is_termination?).and_return(true)
-    allow(subject).to receive(:existing_policy).and_return(existing_policy)
-    allow(subject).to receive(:is_reterm_with_earlier_date?).and_return(true)
-  end
-
-  it "is an already processed termination" do
-    expect(subject.already_processed_termination?).to be_falsey
-  end
-end
-
-describe "#is_reterm_with_earlier_date?" do
-  let(:start_date) {Date.today.beginning_of_month}
+describe "#is_reterm_with_earlier_date?", :dbclean => :after_each do
+  let(:start_date) {Date.today.beginning_of_month - 1.month}
   let(:enrollee) {double}
-  let(:policy_cv) { instance_double(::Openhbx::Cv2::Policy) }
-
+  let(:subscriber_id) {"11"}
+  let!(:policy_cv) { instance_double(::Openhbx::Cv2::Policy, :previous_policy_id => "1234", :enrollees => [enrollee]) }
   let(:m_tag) { double('m_tag') }
   let(:t_stamp) { double('t_stamp') }
   let(:e_xml) { double('e_xml') }
   let(:headers) { double('headers') }
   let(:responder) { instance_double('::ExternalEvents::EventResponder') }
-
   let :subject do
     ::ExternalEvents::EnrollmentEventNotification.new responder, m_tag, t_stamp, e_xml, headers
   end
+  let(:coverage_start) { start_date }
+  let(:coverage_end) { end_date - 10.day }
+  let!(:policy) do
+    enrollee = FactoryGirl.build(:subscriber_enrollee, coverage_start: coverage_start, coverage_end: coverage_end)
+    enrollee.m_id = "11"
+    policy = FactoryGirl.create(:policy, enrollees: [ enrollee ])
+    policy.hbx_enrollment_ids << "1234"
+    policy.save!
+    policy
+  end
+  let(:existing_policy) { instance_double(Policy, :terminated? => true) }
 
-  context "with new past end date" do
+  before :each do
+    allow(subject).to receive(:enrollment_action).and_return("urn:openhbx:terms:v1:enrollment#terminate_enrollment")
+    allow(subject).to receive(:existing_policy).and_return(existing_policy)
+    allow(subject).to receive(:subscriber).and_return(enrollee)
+    allow(subject).to receive(:extract_enrollee_end).with(enrollee).and_return(end_date)
+    allow(subject).to receive(:extract_enrollee_start).with(enrollee).and_return(start_date)
+    allow(subject).to receive(:policy_cv).and_return(policy_cv)
+    allow(subject).to receive(:all_member_ids).and_return([subscriber_id])
+    allow(subject).to receive(:subscriber_id).and_return(subscriber_id)
+    allow(subject).to receive(:extract_member_id).with(enrollee).and_return(subscriber_id)
+  end
 
-    let(:existing_policy) { instance_double(Policy, :terminated? => true, :policy_end => Date.today.next_month) }
-
-    before :each do
-      allow(subject).to receive(:enrollment_action).and_return("urn:openhbx:terms:v1:enrollment#terminate_enrollment")
-      allow(subject).to receive(:existing_policy).and_return(existing_policy)
-      allow(subject).to receive(:subscriber).and_return(enrollee)
-      allow(subject).to receive(:extract_enrollee_end).with(enrollee).and_return(start_date)
-    end
+  context "with new past date", :dbclean => :after_each do
+    let(:end_date) {Date.today.beginning_of_month}
 
     it "should return true" do
       expect(subject.is_reterm_with_earlier_date?).to be_truthy
     end
+  end
 
+  context "with today's date" do
+    let(:end_date) {Date.today}
+
+    it "should return true" do
+      expect(subject.is_reterm_with_earlier_date?).to be_truthy
+    end
   end
 
   context "with new future end date" do
-
-    let(:start_date) {Date.today.beginning_of_month + 2.months}
-    let(:existing_policy) { instance_double(Policy, :terminated? => true, :policy_end => Date.today.next_month) }
-
-    before :each do
-      allow(subject).to receive(:enrollment_action).and_return("urn:openhbx:terms:v1:enrollment#terminate_enrollment")
-      allow(subject).to receive(:existing_policy).and_return(existing_policy)
-      allow(subject).to receive(:subscriber).and_return(enrollee)
-      allow(subject).to receive(:extract_enrollee_end).with(enrollee).and_return(start_date)
-    end
+    let!(:end_date) {Date.today.end_of_month}
 
     it "should return false" do
       expect(subject.is_reterm_with_earlier_date?).to be_falsey
@@ -680,76 +674,11 @@ describe "#is_reterm_with_earlier_date?" do
   end
 
   context "with no end date" do
-
-    let(:start_date) {nil}
-    let(:existing_policy) { instance_double(Policy, :terminated? => true, :policy_end => Date.today.next_month) }
-
-    before :each do
-      allow(subject).to receive(:enrollment_action).and_return("urn:openhbx:terms:v1:enrollment#terminate_enrollment")
-      allow(subject).to receive(:existing_policy).and_return(existing_policy)
-      allow(subject).to receive(:subscriber).and_return(enrollee)
-      allow(subject).to receive(:extract_enrollee_end).with(enrollee).and_return(start_date)
-    end
+    let!(:coverage_end) {start_date}
+    let!(:end_date) {''}
 
     it "should return false" do
       expect(subject.is_reterm_with_earlier_date?).to be_falsey
-    end
-  end
-end
-
-describe "#drop_if_already_processed" do
-  let(:start_date) {Date.today.beginning_of_month}
-  let(:enrollee) {double}
-  let(:policy_cv) { instance_double(::Openhbx::Cv2::Policy) }
-
-  let(:m_tag) { double('m_tag') }
-  let(:t_stamp) { double('t_stamp') }
-  let(:e_xml) { double('e_xml') }
-  let(:headers) { double('headers') }
-  let(:responder) { instance_double('::ExternalEvents::EventResponder') }
-  let(:policy) { FactoryGirl.create(:policy) }
-  let(:hbx_enrollment_id) { policy.hbx_enrollment_ids.first }
-
-  let!(:enrollment_action_issue) do
-    ::EnrollmentAction::EnrollmentActionIssue.create(
-      :hbx_enrollment_id => hbx_enrollment_id,
-      :enrollment_action_uri => "urn:openhbx:terms:v1:enrollment#terminate_enrollment"
-    )
-  end
-
-  let(:existing_policy) { instance_double(Policy, :terminated? => true, :policy_end => Date.today.next_month) }
-  
-  let :subject do
-    ::ExternalEvents::EnrollmentEventNotification.new responder, m_tag, t_stamp, e_xml, headers
-  end
-
-  context "termination event received for already terminated policy and eligible for re-termination" do
-    before do
-      allow(subject).to receive(:is_termination?).and_return(true)
-      allow(subject).to receive(:hbx_enrollment_id).and_return(hbx_enrollment_id)
-      allow(subject).to receive(:enrollment_action).and_return("urn:openhbx:terms:v1:enrollment#terminate_enrollment")
-       allow(subject).to receive(:is_reterm_with_earlier_date?).and_return(true)
-    end
-
-    it "returns false" do
-      expect(subject.drop_if_already_processed!).to be_false
-    end
-  end
-
-  context "termination event received for already terminated policy and not eligble for re-termination" do
-    let!(:result_publisher) { double :drop_if_already_processed! => true }
-    
-    before do
-      allow(subject).to receive(:is_termination?).and_return(true)
-      allow(subject).to receive('response_with_publisher').and_yield(result_publisher)
-      allow(subject).to receive(:hbx_enrollment_id).and_return(hbx_enrollment_id)
-      allow(subject).to receive(:enrollment_action).and_return("urn:openhbx:terms:v1:enrollment#terminate_enrollment")
-      allow(subject).to receive(:is_reterm_with_earlier_date?).and_return(false)
-    end
-
-    it "returns notify event already processed" do
-      expect(result_publisher).to receive(:drop_already_processed!).with(subject)
-      subject.drop_if_already_processed!
     end
   end
 end

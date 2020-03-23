@@ -30,23 +30,32 @@ describe EnrollmentAction::TerminatePolicyWithEarlierDate, "given an EnrollmentA
 end
 
 describe EnrollmentAction::TerminatePolicyWithEarlierDate, "given a valid enrollment" do
+  let(:coverage_start) {Date.today.beginning_of_month - 1.month}
+  let(:coverage_end) {Date.today.beginning_of_month}
   let(:member) { instance_double(Openhbx::Cv2::EnrolleeMember, id: 1) }
   let(:enrollee) { instance_double(::Openhbx::Cv2::Enrollee, member: member) }
-  let(:terminated_policy_cv) { instance_double(Openhbx::Cv2::Policy, enrollees: [enrollee])}
-  let(:policy) { instance_double(Policy, hbx_enrollment_ids: [1]) }
+  let(:terminated_policy_cv) { instance_double(Openhbx::Cv2::Policy, enrollees: [enrollee], previous_policy_id: "123")}
 
-  context "when policy found" do
+  let!(:policy) do
+    enrollee = FactoryGirl.build(:subscriber_enrollee, coverage_start: coverage_start, coverage_end: coverage_end)
+    policy = FactoryGirl.create(:policy, enrollees: [ enrollee ])
+    policy.hbx_enrollment_ids << "123"
+    policy.save!
+    policy
+  end
+
+  context "when policy found", :dbclean => :after_each do
 
     let(:termination_event) { instance_double(
         ::ExternalEvents::EnrollmentEventNotification,
         policy_cv: terminated_policy_cv,
         existing_policy: policy,
-        all_member_ids: [1,2]
+        all_member_ids: [1,2],
+        hbx_enrollment_id: "2",
     ) }
 
     before do
       allow(termination_event).to receive(:subscriber_end).and_return(Date.today)
-      allow(termination_event.existing_policy).to receive(:terminate_as_of).with(termination_event.subscriber_end).and_return(true)
     end
 
     subject do
@@ -58,8 +67,8 @@ describe EnrollmentAction::TerminatePolicyWithEarlierDate, "given a valid enroll
     end
   end
 
-  context "when policy not found" do
-
+  context "when policy not found",:dbclean => :after_each do
+    let(:terminated_policy_cv) { instance_double(Openhbx::Cv2::Policy, enrollees: [enrollee], previous_policy_id: "3")}
     let!(:new_termination_event) { instance_double(
         ::ExternalEvents::EnrollmentEventNotification,
         policy_cv: terminated_policy_cv,
