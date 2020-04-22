@@ -264,6 +264,9 @@ module ExternalEvents
       @subscriber_start ||= extract_enrollee_start(subscriber)
     end
 
+    # Provides the subscriber end date from the event.
+    #
+    # @return [Date, nil] the extracted end date
     def subscriber_end
       @subscriber_end ||= extract_enrollee_end(subscriber)
     end
