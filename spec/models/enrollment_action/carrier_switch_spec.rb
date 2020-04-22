@@ -59,6 +59,7 @@ describe EnrollmentAction::CarrierSwitch, "given a qualified enrollment set, bei
   end
 
   before :each do
+    allow(policy).to receive(:term_for_np).and_return(false)
     allow(ExternalEvents::ExternalMember).to receive(:new).with(member_primary).and_return(primary_db_record)
     allow(ExternalEvents::ExternalMember).to receive(:new).with(member_secondary).and_return(secondary_db_record)
     allow(ExternalEvents::ExternalMember).to receive(:new).with(member_new).and_return(new_db_record)

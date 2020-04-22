@@ -192,7 +192,7 @@ module ExternalEvents
     def member_exempt_from_termination_notification?(pol, enrollee_node)
       end_date = extract_enrollee_end(enrollee_node)
       return false if end_date.blank?
-      termination_event_exempt_from_notification?(pol, end_date)
+      termination_event_exempt_from_notification?(pol, end_date, false)
     end
   end
 end

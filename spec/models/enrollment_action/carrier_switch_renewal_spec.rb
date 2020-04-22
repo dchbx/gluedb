@@ -67,6 +67,7 @@ describe EnrollmentAction::CarrierSwitchRenewal, "given a qualified enrollment s
   end
 
   before :each do
+    allow(other_carrier_term_candidate).to receive(:term_for_np).and_return(false)
     allow(ExternalEvents::ExternalMember).to receive(:new).with(member_primary).and_return(primary_db_record)
     allow(ExternalEvents::ExternalMember).to receive(:new).with(member_secondary).and_return(secondary_db_record)
     allow(ExternalEvents::ExternalPolicy).to receive(:new).with(new_policy_cv, plan, false, market_from_payload: subject.action).and_return(policy_updater)
@@ -114,9 +115,21 @@ describe EnrollmentAction::CarrierSwitchRenewal, "given a qualified enrollment s
     let(:subscriber_start) { Date.new(2016, 1, 1) }
     let(:subscriber_end) { Date.new(2015, 12, 31) }
 
-    it "notifies of the termination" do
-      allow(subject).to receive(:check_for_npt_flag_end_date).with(other_carrier_term_candidate).and_return(true)
+    it "does not notify of the termination" do
       expect(Observers::PolicyUpdated).not_to receive(:notify).with(other_carrier_term_candidate)
+      subject.persist
+    end
+  end
+
+  describe "given IVL with end date of 12/31, but an NPT change" do
+    let(:is_shop) { false }
+
+    let(:subscriber_start) { Date.new(2016, 1, 1) }
+    let(:subscriber_end) { Date.new(2015, 12, 31) }
+
+    it "notifies of the termination" do
+      allow(other_carrier_term_candidate).to receive(:term_for_np).and_return(true, false)
+      expect(Observers::PolicyUpdated).to receive(:notify).with(other_carrier_term_candidate)
       subject.persist
     end
   end

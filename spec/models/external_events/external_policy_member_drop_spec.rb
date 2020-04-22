@@ -146,7 +146,6 @@ describe ExternalEvents::ExternalPolicyMemberDrop, "given:
     end
 
     it "doesn't notify" do
-      allow(subject).to receive(:check_for_npt_flag_end_date).with(existing_policy).and_return(true)
       expect(Observers::PolicyUpdated).not_to receive(:notify).with(existing_policy)
       subject.persist
     end

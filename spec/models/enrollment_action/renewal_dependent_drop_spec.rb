@@ -98,7 +98,6 @@ describe EnrollmentAction::RenewalDependentDrop, "given a qualified enrollent se
     let(:member_end_date) { Date.new(2015, 12, 31) }
 
     it "notifies of the termination" do
-      allow(subject).to receive(:check_for_npt_flag_end_date).with(old_policy).and_return(true)
       expect(Observers::PolicyUpdated).not_to receive(:notify).with(old_policy)
       subject.persist
     end

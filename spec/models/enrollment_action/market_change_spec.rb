@@ -76,11 +76,13 @@ describe EnrollmentAction::MarketChange, "given a qualified enrollment set, bein
   end
 
   it "notifies of the termination" do
+    allow(policy).to receive(:term_for_np).and_return(false)
     expect(Observers::PolicyUpdated).to receive(:notify).with(policy)
     subject.persist
   end
 
   it "successfully creates the new policy" do
+    allow(policy).to receive(:term_for_np).and_return(false)
     expect(subject.persist).to be_truthy
   end
 
@@ -89,6 +91,7 @@ describe EnrollmentAction::MarketChange, "given a qualified enrollment set, bein
     let(:subscriber_end) { Date.new(2015, 5, 31) }
 
     it "notifies of the termination" do
+      allow(policy).to receive(:term_for_np).and_return(true)
       expect(Observers::PolicyUpdated).to receive(:notify).with(policy)
       subject.persist
     end
@@ -98,9 +101,20 @@ describe EnrollmentAction::MarketChange, "given a qualified enrollment set, bein
     let(:is_shop) { false }
     let(:subscriber_end) { Date.new(2015, 12, 31) }
 
-    it "notifies of the termination" do
-      allow(subject).to receive(:check_for_npt_flag_end_date).with(policy).and_return(true)
+    it "doesn't notify of the termination" do
+      allow(policy).to receive(:term_for_np).and_return(true)
       expect(Observers::PolicyUpdated).not_to receive(:notify).with(policy)
+      subject.persist
+    end
+  end
+
+  describe "given IVL with end date of 12/31, but a changed NPT" do
+    let(:is_shop) { false }
+    let(:subscriber_end) { Date.new(2015, 12, 31) }
+
+    it "notifies of the termination" do
+      allow(policy).to receive(:term_for_np).and_return(true, false)
+      expect(Observers::PolicyUpdated).to receive(:notify).with(policy)
       subject.persist
     end
   end

@@ -53,6 +53,7 @@ describe EnrollmentAction::Termination, "given a valid shop enrollment" do
     ) }
 
   before :each do
+    allow(policy).to receive(:term_for_np).and_return(false)
     allow(termination_event.existing_policy).to receive(:terminate_as_of).and_return(true)
     allow(termination_event).to receive(:subscriber_end).and_return(false)
     allow(Observers::PolicyUpdated).to receive(:notify).with(policy)
@@ -85,9 +86,9 @@ describe EnrollmentAction::Termination, "given a valid IVL enrollment, ending 12
     ) }
 
   before :each do
-    allow(termination_event.existing_policy).to receive(:terminate_as_of).and_return(true)
+    allow(policy).to receive(:term_for_np).and_return(false)
+    allow(policy).to receive(:terminate_as_of).and_return(true)
     allow(termination_event).to receive(:subscriber_end).and_return(Date.new(Date.today.year, 12, 31))
-    allow(subject).to receive(:check_for_npt_flag_end_date).with(policy).and_return(true)
     allow(Observers::PolicyUpdated).to receive(:notify).with(policy)
   end
 
@@ -97,6 +98,39 @@ describe EnrollmentAction::Termination, "given a valid IVL enrollment, ending 12
 
   it "does not notify of the termination" do
     expect(Observers::PolicyUpdated).not_to receive(:notify).with(policy)
+    subject.persist
+  end
+
+  it "persists" do
+    expect(subject.persist).to be_truthy
+  end
+end
+
+describe EnrollmentAction::Termination, "given a valid IVL enrollment, ending 12/31, but with an npt change" do
+  let(:member) { instance_double(Openhbx::Cv2::EnrolleeMember, id: 1) }
+  let(:enrollee) { instance_double(::Openhbx::Cv2::Enrollee, member: member) }
+  let(:terminated_policy_cv) { instance_double(Openhbx::Cv2::Policy, enrollees: [enrollee])}
+  let(:policy) { instance_double(Policy, hbx_enrollment_ids: [1], policy_end: ((Date.today - 1.day)), is_shop?: false) }
+  let(:termination_event) { instance_double(
+    ::ExternalEvents::EnrollmentEventNotification,
+    policy_cv: terminated_policy_cv,
+    existing_policy: policy,
+    all_member_ids: [1,2]
+    ) }
+
+  before :each do
+    allow(policy).to receive(:term_for_np).and_return(true, false)
+    allow(policy).to receive(:terminate_as_of).and_return(true)
+    allow(termination_event).to receive(:subscriber_end).and_return(Date.new(Date.today.year, 12, 31))
+    allow(Observers::PolicyUpdated).to receive(:notify).with(policy)
+  end
+
+  subject do
+    EnrollmentAction::Termination.new(termination_event, nil)
+  end
+
+  it "notifies of the termination" do
+    expect(Observers::PolicyUpdated).to receive(:notify).with(policy)
     subject.persist
   end
 

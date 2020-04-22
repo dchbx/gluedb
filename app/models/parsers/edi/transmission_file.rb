@@ -178,23 +178,7 @@ module Parsers
           policy.merge_enrollee(enrollee, policy_loop.action)
         end
         policy.save!
-        unless termination_event_exempt_from_notification?(policy)
-          Observers::PolicyUpdated.notify(policy)
-        end
         policy
-      end
-
-      def termination_event_exempt_from_notification?(policy)
-        if @before_updated_policy.present?
-          @updated_policy = policy
-          #Policy End Date change - null to 12/31 AND no NPT indicator change (don't notify)
-          #Dependent Only End Date Change - null to 12/31 AND no NPT status change (don't notify)
-          is_npt_flag_same? && is_dependent_coverage_end_change_to_end_of_year?
-        end
-      end
-
-      def is_npt_flag_same?
-        @updated_policy.term_for_np == @before_updated_policy.term_for_np
       end
 
       def is_dependent_coverage_end_change_to_end_of_year?

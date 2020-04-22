@@ -20,8 +20,9 @@ module EnrollmentAction
         [t_pol, t_pol.active_member_ids]
       end
       termination_results = termination_candidates.map do |rc|
+        existing_npt = rc.term_for_np
         term_result = rc.terminate_as_of(action.subscriber_start - 1.day)
-        unless termination_event_exempt_from_notification?(rc, action.subscriber_start - 1.day)
+        unless termination_event_exempt_from_notification?(rc, action.subscriber_start - 1.day, true, existing_npt)
           Observers::PolicyUpdated.notify(rc)
         end
         term_result
