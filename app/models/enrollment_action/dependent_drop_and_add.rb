@@ -66,6 +66,8 @@ module EnrollmentAction
       change_publish_helper.filter_affected_members(added_dependents)
       change_publish_helper.set_event_action("urn:openhbx:terms:v1:enrollment#change_member_add")
       change_publish_helper.set_member_starts(member_date_map)
+      change_publish_helper.keep_member_ends([])
+      publish_edi(amqp_connection, change_publish_helper.to_xml, termination.hbx_enrollment_id, termination.employer_hbx_id)
     end
 
   end
