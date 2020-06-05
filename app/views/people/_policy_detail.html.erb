@@ -20,7 +20,7 @@
 		  <dd><%= policy_sponsor(p) %></dd>
 		  <dt>Status</dt>
       <dd><%= policy_status(p) %></dd>
-		  <%if can? :edit, @people %>
+		  <%if can? :read, Policy %>
 		  		<% ben_statuses = [] %>
 		  		<% p.enrollees.each do |enrollee| %>
 		  				<% ben_statuses.push(enrollee.ben_stat.upcase) %>
