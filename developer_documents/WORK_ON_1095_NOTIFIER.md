@@ -1,5 +1,7 @@
 1. ~~Observer~~
 2. ~~Individual Updates - individual_change_set.rb~~
+   1. ~~person_dob_change_set.rb~~
+   2. ~~person_ssn_change_set.rb~~
 3. ~~Enrollment Actions~~
    1. ~~active_renewal.rb~~
    2. ~~assistance_change.rb~~

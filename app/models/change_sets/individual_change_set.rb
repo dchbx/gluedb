@@ -63,10 +63,8 @@ module ChangeSets
 
     def process_first_edi_change
       if home_address_changed?
-        notify_report_eligible_policies
         @home_address_changer.perform_update(record, resource, determine_policies_to_transmit)
       elsif mailing_address_changed?
-        notify_report_eligible_policies
         @mailing_address_changer.perform_update(record, resource, determine_policies_to_transmit)
       elsif names_changed?
         process_name_change
@@ -75,19 +73,14 @@ module ChangeSets
       elsif gender_changed?
         process_gender_change
       elsif work_email_changed?
-        notify_report_eligible_policies
         @work_email_changer.perform_update(record, resource, determine_policies_to_transmit, !multiple_contact_changes?)
       elsif work_phone_changed?
-        notify_report_eligible_policies
         @work_phone_changer.perform_update(record, resource, determine_policies_to_transmit, !multiple_contact_changes?)
       elsif mobile_phone_changed?
-        notify_report_eligible_policies
         @mobile_phone_changer.perform_update(record, resource, determine_policies_to_transmit, !multiple_contact_changes?)
       elsif home_phone_changed?
-        notify_report_eligible_policies
         @home_phone_changer.perform_update(record, resource, determine_policies_to_transmit, !multiple_contact_changes?)
       elsif home_email_changed?
-        notify_report_eligible_policies
         @home_email_changer.perform_update(record, resource, determine_policies_to_transmit, !multiple_contact_changes?)
       elsif dob_changed?
         notify_report_eligible_policies
@@ -104,12 +97,10 @@ module ChangeSets
     end
 
     def process_relationship_change
-      notify_report_eligible_policies
       @relationship_changer.perform_update(member, resource, now_or_future_active_policies)
     end
 
     def process_name_change
-      notify_report_eligible_policies
       cs = ::ChangeSets::PersonNameChangeSet.new
       cs.perform_update(record, resource, determine_policies_to_transmit)
     end
@@ -121,7 +112,6 @@ module ChangeSets
     end
 
     def process_gender_change
-      notify_report_eligible_policies
       cs = ::ChangeSets::PersonGenderChangeSet.new
       cs.perform_update(member, resource, determine_policies_to_transmit)
     end
