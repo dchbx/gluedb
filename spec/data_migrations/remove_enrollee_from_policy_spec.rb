@@ -1,12 +1,12 @@
 require "rails_helper"
-require File.join(Rails.root,"app","data_migrations","remove_enrollee_from_enrollment")
+require File.join(Rails.root, "app", "data_migrations", "remove_enrollee_from_policy")
 
-describe RemoveEnrolleeFromEnrollment, dbclean: :after_each do 
-  let(:given_task_name) { "remove_enrollee_from_enrollment" }
+describe RemoveEnrolleeFromPolicy, dbclean: :after_each do 
+  let(:given_task_name) { "remove_enrollee_from_policy" }
   let(:policy) { FactoryGirl.create(:policy) }
   let (:enrollees) { policy.enrollees }
   let(:removal_enrollee) { policy.enrollees.sample(1).first }
-  subject { RemoveEnrolleeFromEnrollment.new(given_task_name, double(:current_scope => nil)) }
+  subject { RemoveEnrolleeFromPolicy.new(given_task_name, double(:current_scope => nil)) }
 
   describe "given a task name" do 
     it "has the given task name" do 

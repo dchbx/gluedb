@@ -7,3 +7,4 @@ namespace :migrations do
   desc "Remove Enrollee from Policy"
   RemoveEnrolleeFromPolicy.define_task :remove_enrollee_from_policy => :environment
 end
+

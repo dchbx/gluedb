@@ -1,6 +1,6 @@
 require File.join(Rails.root, "lib/mongoid_migration_task")
 
-class RemoveEnrolleeFromEnrollment < MongoidMigrationTask
+class RemoveEnrolleeFromPolicy < MongoidMigrationTask
   
   def find_enrollee_to_remove(enrollees,removal_id)
    enrollees.detect{|en| en.m_id == removal_id}
