@@ -4,7 +4,7 @@ module Generators::Reports
     attr_accessor :notice_params, :policy, :most_recent_original_transmission
 
     NS = {
-      "xmlns:ns0"  => "http://birsrep.dsh.cms.gov/exchange/1.0",
+      "xmlns"  => "http://birsrep.dsh.cms.gov/exchange/1.0",
       "xmlns:ns3"  => "http://hix.cms.gov/0.1/hix-core", 
       "xmlns:ns4"  => "http://birsrep.dsh.cms.gov/extension/1.0",
       "xmlns:ns5"  => "http://niem.gov/niem/niem-core/2.0"
@@ -15,7 +15,7 @@ module Generators::Reports
     def create(folder, notice_params = nil)
       @folder = folder
       @notice_params = notice_params
-      @policy = Policy.where(id: notice_params[:policy_id]).first
+      @policy = Policy.find(notice_params[:policy_id])
       @most_recent_original_transmission = policy.federal_transmissions.where(report_type: 'ORIGINAL').last
       @manifest = OpenStruct.new({
         file_count: Dir.glob(@folder+'/*.xml').count,
@@ -60,11 +60,9 @@ module Generators::Reports
         if type.match(/corrected/i)
           xml['ns4'].BatchCategoryCode 'IRS_EOY_SUBMIT_CORRECTED_RECORDS_REQ'
           xml.BatchTransmissionQuantity 1
-          xml['ns4'].OriginalBatchId most_recent_original_transmission.batch_id.to_s
         elsif type.match(/void/i)
           xml['ns4'].BatchCategoryCode 'IRS_EOY_SUBMIT_VOID_RECORDS_REQ'
           xml.BatchTransmissionQuantity 1
-          xml['ns4'].OriginalBatchId most_recent_original_transmission.batch_id.to_s
         else # original/new
           xml['ns4'].BatchCategoryCode 'IRS_EOY_REQ'
           xml.BatchTransmissionQuantity 1
@@ -84,6 +82,7 @@ module Generators::Reports
         xml.ReportPeriod do |xml|
           xml['ns5'].Year notice_params[:calender_year]
         end
+        xml['ns4'].OriginalBatchID most_recent_original_transmission.batch_id.to_s
       end
     end
 

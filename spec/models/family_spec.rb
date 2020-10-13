@@ -18,7 +18,7 @@ describe Family, :dbclean => :after_each do
           e_case_id: "6754632abc",
           renewal_consent_through_year: 2017,
           family_members: [a0, a1],
-          submitted_at: DateTime.now,
+          submitted_at: now,
           is_active: true,
           updated_by: "rspec"
       )

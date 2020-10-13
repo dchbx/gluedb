@@ -43,6 +43,7 @@ module Generators::Reports
       allow(dependent1).to receive(:canceled?).and_return(false)
       allow(dependent2).to receive(:canceled?).and_return(false)
       allow(address).to receive(:to_hash).and_return(address_hash)
+      allow(mock_disposition).to receive(:policy).and_return(policy)
       allow(mock_disposition).to receive(:as_of).and_return(mock_policy)
 
       subject.carrier_hash = carrier_hash

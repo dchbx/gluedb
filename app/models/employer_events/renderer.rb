@@ -17,10 +17,13 @@ module EmployerEvents
 
     def has_current_or_future_plan_year?(carrier)
       found_plan_year = false
+      found_start_date = nil
+      found_end_date = nil
       carrier_plan_years(carrier).each do |node|
         node.xpath("cv:plan_year_start", {:cv => XML_NS}).each do |date_node|
           date_value = Date.strptime(date_node.content, "%Y%m%d") rescue nil
           if date_value
+            found_start_date = date_value
             if date_value >= Date.today
               found_plan_year = true
             end
@@ -29,12 +32,14 @@ module EmployerEvents
         node.xpath("cv:plan_year_end", {:cv => XML_NS}).each do |date_node|
           date_value = Date.strptime(date_node.content, "%Y%m%d") rescue nil
           if date_value
+            found_end_date = date_value
             if date_value >= Date.today
               found_plan_year = true
             end
           end
         end
       end
+      return false if found_start_date && found_end_date && (found_start_date == found_end_date)
       found_plan_year
     end
 

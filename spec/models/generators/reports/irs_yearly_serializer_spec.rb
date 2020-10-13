@@ -3,7 +3,9 @@ require 'rails_helper'
 describe Generators::Reports::IrsYearlySerializer, :dbclean => :after_each do
 
   let(:address)  { FactoryGirl.create(:address, state:"CA", street_1:"test", street_2:"test 2", city: 'city', zip: "12022", street_1:"street 1", street_2: "street 2", person: person) }
-  let(:enrollee) {policy.enrollees.create!(m_id: person.members.first.hbx_member_id, rel_code: "self", coverage_start: (Date.today - 1.year), coverage_end: (Date.today - 1.day)) }
+  let(:coverage_start) {Date.today.beginning_of_year}
+  let(:coverage_end) {coverage_start.end_of_year }
+  let(:enrollee) {policy.enrollees.create!(m_id: person.members.first.hbx_member_id, rel_code: "self", coverage_start: coverage_start, coverage_end: coverage_end) }
   let(:plan) {FactoryGirl.create(:plan, hios_plan_id: "23232323", ehb: 12, carrier: carrier)} 
   let(:carrier) {FactoryGirl.create(:carrier)}  
 
@@ -17,16 +19,19 @@ describe Generators::Reports::IrsYearlySerializer, :dbclean => :after_each do
   let(:policy) { FactoryGirl.create(:policy, term_for_np: false, applied_aptc: 0, pre_amt_tot: 123, plan: plan, carrier: carrier) } 
 
   let(:person) {FactoryGirl.create(:person, authority_member_id: policy.subscriber.m_id)}
+  let(:ft_params) {{report_type: "ORIGINAL", batch_id: "1241241", content_file: "00001", record_sequence_number: "010101"}}
   
   before(:each) do
     person.members.each{|member| member.update_attributes!(dob: (Date.today - 21.years))}
-    FileUtils.rm_rf(Dir["FFEP*"])
+    FileUtils.rm_rf(Dir["FEP*"])
     FileUtils.rm_rf(Dir["H41_federal_report"])
     FileUtils.rm_rf(Dir["*.zip"])
     FileUtils.rm_rf(Dir["#{Rails.root}/tmp/irs_notices"])
-    policy.enrollees.each{|er|er.update_attributes!(coverage_start: (Date.today - 1.year), coverage_end: (Date.today - 1.day))}
+
+    policy.enrollees.each{|er|er.update_attributes!(coverage_start: coverage_start, coverage_end: coverage_end)}
     plan.premium_tables.create!(rate_start_date: policy.coverage_period.first,rate_end_date: policy.coverage_period.last, age: ((policy.coverage_period.first.year - 1) -  (Date.today.year - 21.years)), amount:12)
     allow(subject).to receive(:append_report_row).and_return(true)
+    policy.federal_transmissions.create!(ft_params)
   end
   
 
@@ -53,6 +58,7 @@ subject { Generators::Reports::IrsYearlySerializer.new(params) }
         subject.generate_h41
         expect(File).to exist("#{h41_folder_name}")
         expect(File).to exist("#{h41_folder_name}.zip")
+        FileUtils.rm_rf(Dir["FEP*"])
         FileUtils.rm_rf(Dir[("H41_federal_report")])
         FileUtils.rm_rf(Dir["*.zip"])
       end
