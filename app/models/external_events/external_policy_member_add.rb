@@ -25,6 +25,14 @@ module ExternalEvents
       BigDecimal.new(Maybe.new(p_enrollment).total_responsible_amount.strip.value)
     end
 
+    def extract_aptc_value
+      p_enrollment = Maybe.new(@policy_node).policy_enrollment.value
+      return({}) if p_enrollment.blank?
+      applied_aptc_val = Maybe.new(p_enrollment).individual_market.applied_aptc_amount.strip.value
+      return nil if applied_aptc_val.blank?
+      BigDecimal.new(applied_aptc_val)
+    end
+
     def extract_enrollee_premium(enrollee)
       pre_string = Maybe.new(enrollee).benefit.premium_amount.value
       return 0.00 if pre_string.blank?
@@ -128,17 +136,28 @@ module ExternalEvents
       end
     end
 
+    def populate_aptc_credit_changes(policy)
+        new_aptc_date = policy.enrollees.map(&:coverage_start).uniq.sort.last
+        tot_res_amt = extract_tot_res_amt
+        pre_amt_tot = extract_pre_amt_tot
+        aptc_amt = extract_aptc_value
+        policy.set_aptc_effective_on(new_aptc_date, aptc_amt, pre_amt_tot, tot_res_amt)
+        policy.save!
+    end
+
     def persist
       pol = policy_to_update
+      existing_aptc = pol.applied_aptc
       pol.update_attributes!({
         :pre_amt_tot => extract_pre_amt_tot,
         :tot_res_amt => extract_tot_res_amt
-      }.merge(extract_other_financials))
+      }.merge(extract_other_financials))      
       pol = Policy.find(pol._id)
       @policy_node.enrollees.each do |en|
         build_enrollee(pol, en)
       end
       Observers::PolicyUpdated.notify(pol)
+      populate_aptc_credit_changes(pol) if existing_aptc != extract_aptc_value && !pol.is_shop?
       true
     end
   end
