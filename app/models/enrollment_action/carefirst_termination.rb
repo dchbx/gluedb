@@ -12,6 +12,10 @@ module EnrollmentAction
     def persist
       if termination.existing_policy
         policy_to_term = termination.existing_policy
+        unless policy_to_term.is_shop?
+          policy_to_term.reload
+          return false if policy_to_term.canceled?
+        end
         # Is this even a cancellation, if so, check for custom NPT behaviour,
         # otherwise do nothing
 
@@ -36,7 +40,12 @@ module EnrollmentAction
             puts e.to_s
           end
         end
-        return policy_to_term.terminate_as_of(termination.subscriber_end)
+        policy_to_term.terminate_as_of(termination.subscriber_end)
+        if termination.existing_policy.carrier.termination_cancels_renewal
+          termination.renewal_policies_to_cancel.each do |pol|
+            pol.cancel_via_hbx!
+          end
+        end
       end
       true
     end

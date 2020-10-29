@@ -48,7 +48,11 @@ module EnrollmentAction
         publish_edi(amqp_connection, term_action_helper.to_xml, pol.eg_id, employer_hbx_id)
       end
       action_helper = EnrollmentAction::ActionPublishHelper.new(action.event_xml)
-      action_helper.set_event_action("urn:openhbx:terms:v1:enrollment#active_renew")
+      if action.renewal_cancel_policy.present? && action.existing_policy.carrier.canceled_renewal_causes_new_coverage
+        action_helper.set_event_action("urn:openhbx:terms:v1:enrollment#initial")
+      else
+        action_helper.set_event_action("urn:openhbx:terms:v1:enrollment#active_renew")
+      end
       action_helper.keep_member_ends([])
       publish_edi(amqp_connection, action_helper.to_xml, action.hbx_enrollment_id, action.employer_hbx_id)
     end

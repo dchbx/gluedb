@@ -93,6 +93,7 @@ describe EnrollmentAction::PassiveRenewal, "publish enrollment set for passive r
     allow(action_publish_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#auto_renew").and_return(true)
     allow(action_publish_helper).to receive(:keep_member_ends).with([]).and_return(true)
     allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, passive_renewal_event.hbx_enrollment_id, passive_renewal_event.employer_hbx_id)
+    allow(passive_renewal_event).to receive(:renewal_cancel_policy).and_return([])
   end
 
   it "publishes an event of type auto renew" do
@@ -110,5 +111,24 @@ describe EnrollmentAction::PassiveRenewal, "publish enrollment set for passive r
     expect(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, 1, 1).
       and_return(true)
     subject.publish
+  end
+
+  context "carrier with canceled_renewal_causes_new_coverage" do
+    let(:carrier) { instance_double(Carrier, :canceled_renewal_causes_new_coverage => true) }
+    let(:policy) { instance_double(Policy, :carrier => carrier) }
+
+    before do
+      allow(EnrollmentAction::ActionPublishHelper).to receive(:new).with(event_xml).and_return(action_publish_helper)
+      allow(action_publish_helper).to receive(:keep_member_ends).with([]).and_return(true)
+      allow(action_publish_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#auto_renew").and_return(true)
+      allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, passive_renewal_event.hbx_enrollment_id, passive_renewal_event.employer_hbx_id)
+      allow(passive_renewal_event).to receive(:renewal_cancel_policy).and_return(true)
+      allow(passive_renewal_event).to receive(:existing_policy).and_return(policy)
+    end
+
+    it "publishes an event of type initial" do
+      expect(action_publish_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#initial")
+      subject.publish
+    end
   end
 end

@@ -18,6 +18,13 @@ class Carrier
   field :requires_simple_plan_changes, type: Boolean, default: false
   field :requires_simple_renewal, type: Boolean, default: false
   field :requires_reinstate_for_earlier_termination, type: Boolean, default: false
+  field :canceled_renewal_causes_new_coverage, type: Boolean, default: false
+  field :termination_cancels_renewal, type: Boolean, default: false
+  field :renewal_dependent_add_transmitted_as_renewal, type: Boolean, default: false
+  field :plan_change_renewal_dependent_add_transmitted_as_renewal, type: Boolean, default: false
+  field :plan_change_renewal_dependent_drop_transmitted_as_renewal, type: Boolean, default: false
+  field :retro_renewal_transmitted_as_renewal, type: Boolean, default: false
+  field :renewal_dependent_drop_transmitted_as_renewal, type: Boolean, default: false
 
   has_many :plans
   has_many :policies

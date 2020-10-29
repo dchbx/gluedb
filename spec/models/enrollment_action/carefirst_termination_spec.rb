@@ -34,7 +34,8 @@ describe EnrollmentAction::CarefirstTermination, "given a valid terminated enrol
   let(:member) { instance_double(Openhbx::Cv2::EnrolleeMember, id: 1) }
   let(:enrollee) { instance_double(::Openhbx::Cv2::Enrollee, member: member) }
   let(:terminated_policy_cv) { instance_double(Openhbx::Cv2::Policy, enrollees: [enrollee])}
-  let(:policy) { instance_double(Policy, hbx_enrollment_ids: [1]) }
+  let(:carrier) { instance_double(Carrier, :termination_cancels_renewal => false) }
+  let(:policy) { instance_double(Policy, hbx_enrollment_ids: [1], carrier: carrier, is_shop?: true) }
   let(:termination_event) { instance_double(
     ::ExternalEvents::EnrollmentEventNotification,
     is_cancel?: false,
@@ -78,7 +79,7 @@ describe EnrollmentAction::CarefirstTermination, "given a valid canceled enrollm
   let!(:policy) { Policy.new(eg_id: '1', enrollees: [enrollee1], plan: plan, carrier: carrier ) }
   let!(:policy2) { Policy.new(eg_id: '2', enrollees: [enrollee2], plan: plan, carrier: carrier, employer_id: nil, aasm_state: "terminated", term_for_np: true ) }
   let!(:plan) { build(:plan) }
-  let!(:carrier) {build(:carrier)}
+  let!(:carrier) {create(:carrier, termination_cancels_renewal: false)}
   let!(:enrollee1) do
     Enrollee.new(
       m_id: member.hbx_member_id,

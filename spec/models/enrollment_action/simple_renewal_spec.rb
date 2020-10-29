@@ -157,6 +157,7 @@ describe EnrollmentAction::SimpleRenewal, "given a qualified enrollment set for 
     allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, action_event.hbx_enrollment_id, action_event.employer_hbx_id)
     allow(action_publish_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#active_renew")
     allow(action_publish_helper).to receive(:keep_member_ends).with([])
+    allow(action_event).to receive(:renewal_cancel_policy).and_return([])
   end
 
   it "publishes an event of enrollment termination" do
@@ -193,5 +194,28 @@ describe EnrollmentAction::SimpleRenewal, "given a qualified enrollment set for 
     expect(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, 1, 1).
       and_return(true)
     subject.publish
+  end
+
+  context "carrier with canceled_renewal_causes_new_coverage" do
+    let(:carrier) { instance_double(Carrier, :canceled_renewal_causes_new_coverage => true) }
+    let(:policy) { instance_double(Policy, :carrier => carrier) }
+
+    before do
+      allow(::EnrollmentAction::EnrollmentTerminationEventWriter).to receive(:new).with(terminated_policy, [1,2]).and_return(termination_writer)
+      allow(termination_writer).to receive(:write).with("transaction_id_placeholder", "urn:openhbx:terms:v1:enrollment#terminate_enrollment").and_return(termination_writer_result_xml)
+      allow(::EnrollmentAction::ActionPublishHelper).to receive(:new).with(event_xml).and_return(action_publish_helper)
+      allow(::EnrollmentAction::ActionPublishHelper).to receive(:new).with(termination_writer_result_xml).and_return(termination_publish_helper)
+      allow(subject).to receive(:publish_edi).with(amqp_connection, termination_helper_result_xml, terminated_policy_eg_id, employer_hbx_id)
+      allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, action_event.hbx_enrollment_id, action_event.employer_hbx_id)
+      allow(action_publish_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#active_renew")
+      allow(action_publish_helper).to receive(:keep_member_ends).with([])
+      allow(action_event).to receive(:renewal_cancel_policy).and_return(true)
+      allow(action_event).to receive(:existing_policy).and_return(policy)
+    end
+
+    it "publishes an event of type initial" do
+      expect(action_publish_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#initial")
+      subject.publish
+    end
   end
 end

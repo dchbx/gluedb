@@ -1,6 +1,6 @@
 require "rails_helper"
 
-describe ::ExternalEvents::EnrollmentEventNotification do
+describe ::ExternalEvents::EnrollmentEventNotification, :dbclean => :after_each do
   let(:m_tag) { double('m_tag') }
   let(:t_stamp) { double('t_stamp') }
   let(:e_xml) { double('e_xml') }
@@ -750,6 +750,1178 @@ describe "#drop_if_already_processed" do
     it "returns notify event already processed" do
       expect(result_publisher).to receive(:drop_already_processed!).with(subject)
       subject.drop_if_already_processed!
+    end
+  end
+end
+
+describe "#has_renewal_cancel_policy", :dbclean => :after_each do
+  let(:eg_id) { '1' }
+  let(:carrier_id) { '2' }
+  let(:plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, :coverage_type => "health", year: Date.today.next_year.year) }
+  let!(:primary) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+  let(:coverage_start) { Date.today.next_year.beginning_of_year }
+  let(:enrollee) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: coverage_start)}
+  let(:enrollee2) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: Date.today.next_year.beginning_of_year, coverage_end: coverage_end)}
+
+  let!(:renewal_policy) {
+    policy =  FactoryGirl.create(:policy, enrollment_group_id: eg_id, employer: employer, hbx_enrollment_ids: ["123"], carrier_id: carrier_id, plan: plan, coverage_start: coverage_start, coverage_end: nil, kind: kind, enrollees: [enrollee])
+    policy.update_attributes(hbx_enrollment_ids: ["123"])
+    policy.save
+    policy
+  }
+  let!(:renewal_cancel_policy) {
+    policy =  FactoryGirl.create(:policy, enrollment_group_id: eg_id, employer: employer, carrier_id: carrier_id, plan: plan, coverage_start: Date.today.next_year.beginning_of_year , coverage_end: Date.today.beginning_of_year, kind: kind, enrollees: [enrollee2])
+    policy.save
+    policy
+  }
+
+  let(:source_event_xml) { <<-EVENTXML
+  <enrollment_event xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns='http://openhbx.org/api/terms/1.0'>
+  <header>
+    <hbx_id>29035</hbx_id>
+    <submitted_timestamp>2016-11-08T17:44:49</submitted_timestamp>
+  </header>
+  <event>
+    <body>
+      <enrollment_event_body xmlns="http://openhbx.org/api/terms/1.0">
+        <affected_members>
+          <affected_member>
+            <member>
+              <id><id>1</id></id>
+            </member>
+            <benefit>
+              <premium_amount>465.13</premium_amount>
+              <begin_date>20190101</begin_date>
+            </benefit>
+          </affected_member>
+        </affected_members>
+        <enrollment xmlns="http://openhbx.org/api/terms/1.0">
+          <policy>
+            <id>
+              <id>123</id>
+            </id>
+          <enrollees>
+            <enrollee>
+              <member>
+                <id><id>#{primary.authority_member.hbx_member_id}</id></id>
+              </member>
+              <is_subscriber>true</is_subscriber>
+              <benefit>
+                <premium_amount>111.11</premium_amount>
+                <begin_date>#{Date.today.next_year.beginning_of_year.strftime("%Y%m%d")}</begin_date>
+              </benefit>
+            </enrollee>
+          </enrollees>
+          <enrollment>
+          <individual_market>
+            <assistance_effective_date>TOTALLY BOGUS</assistance_effective_date>
+            <applied_aptc_amount>100.00</applied_aptc_amount>
+          </individual_market>
+          <shop_market>
+            <employer_link>
+              <id><id>urn:openhbx:terms:v1:employer:id##{employer_id}</id></id>
+            </employer_link>
+          </shop_market>
+          <premium_total_amount>56.78</premium_total_amount>
+          <total_responsible_amount>123.45</total_responsible_amount>
+          </enrollment>
+          </policy>
+        </enrollment>
+        </enrollment_event_body>
+    </body>
+  </event>
+</enrollment_event>
+  EVENTXML
+  }
+  let(:m_tag) { double('m_tag') }
+  let(:t_stamp) { double('t_stamp') }
+  let(:headers) { double('headers') }
+  let(:responder) { instance_double('::ExternalEvents::EventResponder') }
+  let :subject do
+    ::ExternalEvents::EnrollmentEventNotification.new responder, m_tag, t_stamp, source_event_xml, headers
+  end
+
+  context "IVL: with canceled renewal policy" do
+    let(:kind) { 'individual' }
+    let(:coverage_end) { Date.today.next_year.beginning_of_year }
+    let(:employer_id) { nil }
+    let(:employer) { nil}
+    before do
+      allow(subject).to receive(:existing_plan).and_return(plan)
+    end
+
+    it "should return canceled renewal policy" do
+      expect(renewal_cancel_policy.is_shop?).to eq false
+      expect(subject.renewal_cancel_policy).to eq([renewal_cancel_policy])
+    end
+  end
+
+  context "IVL: without canceled renewal policy" do
+    let(:kind) { 'individual' }
+    let(:coverage_end) { nil }
+    let(:employer_id) { nil }
+    let(:employer) { nil}
+    before do
+      allow(subject).to receive(:existing_plan).and_return(plan)
+    end
+
+    it "should return empty array" do
+      expect(renewal_cancel_policy.is_shop?).to eq false
+      expect(subject.renewal_cancel_policy).to eq []
+    end
+  end
+
+  context "SHOP: with canceled renewal policy" do
+    let(:kind) { 'shop' }
+    let(:coverage_end) { Date.today.next_year.beginning_of_year }
+    let(:employer) { FactoryGirl.create(:employer)}
+    let(:employer_id) { employer.hbx_id }
+    before do
+      allow(subject).to receive(:existing_plan).and_return(plan)
+    end
+
+    it "should return canceled renewal policy" do
+      expect(renewal_cancel_policy.is_shop?).to eq true
+      expect(subject.renewal_cancel_policy).to eq [renewal_cancel_policy]
+    end
+  end
+
+  context "SHOP: without canceled renewal policy" do
+    let(:kind) { 'shop' }
+    let(:coverage_end) { nil }
+    let(:employer) { FactoryGirl.create(:employer)}
+    let(:employer_id) { employer.hbx_id }
+    before do
+      allow(subject).to receive(:existing_plan).and_return(plan)
+    end
+
+    it "should return empty array" do
+      expect(renewal_cancel_policy.is_shop?).to eq true
+      expect(subject.renewal_cancel_policy).to eq []
+    end
+  end
+end
+
+describe "#renewal_policies_to_cancel", :dbclean => :after_each do
+  let(:eg_id) { '1' }
+  let(:carrier_id) { '2' }
+  let(:plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, hios_plan_id: 123 ,:coverage_type => "health", year: Date.today.next_year.year) }
+  let(:active_plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, hios_plan_id: 123, renewal_plan: plan, :coverage_type => "health", year: Date.today.year) }
+  let(:dental_plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, :coverage_type => "dental", year: Date.today.next_year.year) }
+  let(:catastrophic_active_plan) { Plan.create!(:name => "test_plan", metal_level: 'catastrophic', hios_plan_id: '94506DC0390008', carrier_id: carrier_id, renewal_plan: plan, :coverage_type => "health", year: Date.today.year) }
+  let!(:primary) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+  let(:coverage_start) { Date.today.next_year.beginning_of_year }
+  let(:enrollee) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: Date.today.beginning_of_month, coverage_end: Date.today.end_of_month)}
+  let(:enrollee2) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: Date.today.next_year.beginning_of_year, coverage_end: coverage_end)}
+
+  let!(:active_term_policy) {
+    policy =  FactoryGirl.create(:policy, enrollment_group_id: eg_id, employer: employer, hbx_enrollment_ids: ["123"], carrier_id: carrier_id, plan: active_plan, coverage_start: Date.today.beginning_of_month, coverage_end: Date.today.end_of_month, kind: kind)
+    policy.update_attributes(enrollees: [enrollee], hbx_enrollment_ids: ["123"])
+    policy.save
+    policy
+  }
+  let!(:renewal_policy) {
+    policy =  FactoryGirl.create(:policy, enrollment_group_id: eg_id, employer: employer, carrier_id: carrier_id, plan: plan, coverage_start: Date.today.next_year.beginning_of_year , coverage_end: coverage_end, kind: kind)
+    policy.update_attributes(enrollees: [enrollee2])
+    policy.save
+    policy
+  }
+  let!(:renewal_dental_policy) {
+    policy =  FactoryGirl.create(:policy, enrollment_group_id: eg_id, employer: employer, carrier_id: carrier_id, plan: dental_plan, coverage_start: Date.today.next_year.beginning_of_year , coverage_end: coverage_end, kind: kind, enrollees: [enrollee2])
+    policy.save
+    policy
+  }
+
+  let(:source_event_xml) { <<-EVENTXML
+   <enrollment_event xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns='http://openhbx.org/api/terms/1.0'>
+   <header>
+     <hbx_id>29035</hbx_id>
+     <submitted_timestamp>2016-11-08T17:44:49</submitted_timestamp>
+   </header>
+   <event>
+     <body>
+       <enrollment_event_body xmlns="http://openhbx.org/api/terms/1.0">
+         <affected_members>
+           <affected_member>
+             <member>
+               <id><id>1</id></id>
+             </member>
+             <benefit>
+               <premium_amount>465.13</premium_amount>
+               <begin_date>20190101</begin_date>
+             </benefit>
+           </affected_member>
+         </affected_members>
+         <enrollment xmlns="http://openhbx.org/api/terms/1.0">
+           <policy>
+             <id>
+               <id>123</id>
+             </id>
+           <enrollees>
+             <enrollee>
+               <member>
+                 <id><id>#{primary.authority_member.hbx_member_id}</id></id>
+               </member>
+               <is_subscriber>true</is_subscriber>
+               <benefit>
+                 <premium_amount>111.11</premium_amount>
+                 <begin_date>#{Date.today.next_year.beginning_of_year.strftime("%Y%m%d")}</begin_date>
+               </benefit>
+             </enrollee>
+           </enrollees>
+           <enrollment>
+           <individual_market>
+             <assistance_effective_date>TOTALLY BOGUS</assistance_effective_date>
+             <applied_aptc_amount>100.00</applied_aptc_amount>
+           </individual_market>
+           <shop_market>
+             <employer_link>
+               <id><id>urn:openhbx:terms:v1:employer:id##{employer_id}</id></id>
+             </employer_link>
+           </shop_market>
+           <premium_total_amount>56.78</premium_total_amount>
+           <total_responsible_amount>123.45</total_responsible_amount>
+           </enrollment>
+           </policy>
+         </enrollment>
+         </enrollment_event_body>
+     </body>
+   </event>
+ </enrollment_event>
+  EVENTXML
+  }
+  let(:m_tag) { double('m_tag') }
+  let(:t_stamp) { double('t_stamp') }
+  let(:headers) { double('headers') }
+  let(:responder) { instance_double('::ExternalEvents::EventResponder') }
+  let :subject do
+    ::ExternalEvents::EnrollmentEventNotification.new responder, m_tag, t_stamp, source_event_xml, headers
+  end
+
+  context "IVL: with renewal policy" do
+    let(:kind) { 'individual' }
+    let(:coverage_end) { nil}
+    let(:employer_id) { nil }
+    let(:employer) { nil}
+    before do
+      allow(subject).to receive(:existing_plan).and_return(active_plan)
+    end
+
+    it "should return renewal policy" do
+      expect(renewal_policy.is_shop?).to eq false
+      expect(subject.renewal_policies_to_cancel).to eq([renewal_policy])
+    end
+  end
+  
+  context "IVL with catastrophic plan : with renewal policy" do
+    let(:kind) { 'individual' }
+    let(:coverage_end) { nil}
+    let(:employer_id) { nil }
+    let(:employer) { nil}
+    before do
+      allow(subject).to receive(:existing_plan).and_return(catastrophic_active_plan)
+      active_term_policy.plan = catastrophic_active_plan
+      active_term_policy.save
+    end
+
+    it "should return renewal policy" do
+      expect(renewal_policy.is_shop?).to eq false
+      expect(subject.renewal_policies_to_cancel).to eq([renewal_policy])
+    end
+  end
+
+  context "IVL: without renewal policy" do
+    let(:kind) { 'individual' }
+    let(:coverage_end) { Date.today.next_year.beginning_of_year }
+    let(:employer_id) { nil }
+    let(:employer) { nil}
+    before do
+      allow(subject).to receive(:existing_plan).and_return(active_plan)
+    end
+
+    it "should return empty array" do
+      expect(renewal_policy.is_shop?).to eq false
+      expect(subject.renewal_policies_to_cancel).to eq []
+    end
+  end
+
+  context "SHOP: with renewal policy" do
+    let(:kind) { 'shop' }
+    let(:coverage_end) { nil }
+    let(:employer) { FactoryGirl.create(:employer)}
+    let!(:plan_year) { FactoryGirl.create(:plan_year, employer: employer, start_date: Date.new(Date.today.year, 1, 1), end_date: Date.new(Date.today.year, 12, 31))}
+    let(:employer_id) { employer.hbx_id }
+    before do
+      allow(subject).to receive(:existing_plan).and_return(active_plan)
+    end
+
+    it "should not return renewal policy" do
+      expect(renewal_policy.is_shop?).to eq true
+      expect(subject.renewal_policies_to_cancel).to eq []
+    end
+  end
+
+  context "SHOP: without renewal policy" do
+    let(:kind) { 'shop' }
+    let(:coverage_end) { Date.today.next_year.beginning_of_year  }
+    let(:employer) { FactoryGirl.create(:employer)}
+    let(:employer_id) { employer.hbx_id }
+    before do
+      allow(subject).to receive(:existing_plan).and_return(active_plan)
+    end
+
+    it "should return empty array" do
+      expect(renewal_policy.is_shop?).to eq true
+      expect(subject.renewal_policies_to_cancel).to eq []
+    end
+  end
+end
+
+describe "#dep_add_or_drop_to_renewal_policy?", :dbclean => :after_each do
+  let(:eg_id) { '1' }
+  let(:carrier_id) { '2' }
+  let(:plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, :coverage_type => "health", year: Date.today.next_year.year) }
+  let(:active_plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, renewal_plan: plan, :coverage_type => "health", year: Date.today.year) }
+  let!(:primary) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+  let!(:dep) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+
+  let!(:dep2) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+
+  let!(:dep3) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+
+  let(:prim_coverage_start) { Date.today.next_year.beginning_of_year }
+  let(:dep_coverage_start) { Date.today.next_year.beginning_of_year }
+
+  let(:active_enrollee1) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: Date.today.beginning_of_year, coverage_end: '')}
+  let(:active_enrollee2) { Enrollee.new(m_id: dep.authority_member.hbx_member_id, rel_code: 'child', coverage_start: Date.today.beginning_of_month, coverage_end: coverage_end)}
+  let(:active_enrollee3) { Enrollee.new(m_id: dep2.authority_member.hbx_member_id, rel_code: 'child', coverage_start: Date.today.beginning_of_month, coverage_end: coverage_end)}
+  let(:active_enrollee4) { Enrollee.new(m_id: dep3.authority_member.hbx_member_id, rel_code: 'child', coverage_start: Date.today.beginning_of_month, coverage_end: coverage_end)}
+
+  let(:renewal_enrollee1) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: prim_coverage_start, coverage_end: '')}
+  let(:renewal_enrollee2) { Enrollee.new(m_id: dep.authority_member.hbx_member_id, rel_code: 'child', coverage_start: dep_coverage_start, coverage_end: '')}
+
+  let!(:active_policy) {
+    policy =  FactoryGirl.create(:policy, enrollment_group_id: eg_id, employer: employer, hbx_enrollment_ids: ["123"], carrier_id: carrier_id, plan: active_plan, coverage_start: Date.today.beginning_of_month, coverage_end: nil, kind: kind)
+    policy.update_attributes(enrollees: [active_enrollee1, active_enrollee2, active_enrollee3])
+    policy.save
+    policy
+  }
+  let!(:renewal_policy) {
+    policy =  FactoryGirl.create(:policy, enrollment_group_id: eg_id, employer: employer, carrier_id: carrier_id, plan: plan, coverage_start: Date.today.next_year.beginning_of_year , coverage_end: nil, kind: kind,)
+    policy.update_attributes(enrollees: [renewal_enrollee1, renewal_enrollee2], hbx_enrollment_ids: ["123"])
+    policy.save
+    policy
+  }
+  let(:source_event_xml) { <<-EVENTXML
+   <enrollment_event xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns='http://openhbx.org/api/terms/1.0'>
+   <header>
+     <hbx_id>29035</hbx_id>
+     <submitted_timestamp>2016-11-08T17:44:49</submitted_timestamp>
+   </header>
+   <event>
+     <body>
+       <enrollment_event_body xmlns="http://openhbx.org/api/terms/1.0">
+         <affected_members>
+           <affected_member>
+             <member>
+               <id><id>1</id></id>
+             </member>
+             <benefit>
+               <premium_amount>465.13</premium_amount>
+               <begin_date>20190101</begin_date>
+             </benefit>
+           </affected_member>
+         </affected_members>
+         <enrollment xmlns="http://openhbx.org/api/terms/1.0">
+           <policy>
+             <id>
+               <id>123</id>
+             </id>
+           <enrollees>
+             <enrollee>
+               <member>
+                 <id><id>#{primary.authority_member.hbx_member_id}</id></id>
+               </member>
+               <is_subscriber>true</is_subscriber>
+               <benefit>
+                 <premium_amount>111.11</premium_amount>
+                 <begin_date>#{begin_date}</begin_date>
+               </benefit>
+             </enrollee>
+             <enrollee>
+               <member>
+                 <id><id>#{dep.authority_member.hbx_member_id}</id></id>
+               </member>
+               <is_subscriber>false</is_subscriber>
+               <benefit>
+                 <premium_amount>111.11</premium_amount>
+                 <begin_date>#{begin_date}</begin_date>
+               </benefit>
+             </enrollee>
+             <enrollee>
+               <member>
+                 <id><id>#{dep2.authority_member.hbx_member_id}</id></id>
+               </member>
+               <is_subscriber>false</is_subscriber>
+               <benefit>
+                 <premium_amount>111.11</premium_amount>
+                 <begin_date>#{begin_date}</begin_date>
+               </benefit>
+             </enrollee>
+           </enrollees>
+           <enrollment>
+           <individual_market>
+             <assistance_effective_date>TOTALLY BOGUS</assistance_effective_date>
+             <applied_aptc_amount>100.00</applied_aptc_amount>
+           </individual_market>
+           <shop_market>
+             <employer_link>
+               <id><id>urn:openhbx:terms:v1:employer:id##{employer_id}</id></id>
+             </employer_link>
+           </shop_market>
+           <premium_total_amount>56.78</premium_total_amount>
+           <total_responsible_amount>123.45</total_responsible_amount>
+           </enrollment>
+           </policy>
+         </enrollment>
+         </enrollment_event_body>
+     </body>
+   </event>
+ </enrollment_event>
+  EVENTXML
+  }
+  let(:source_event_xml2) { <<-EVENTXML
+   <enrollment_event xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns='http://openhbx.org/api/terms/1.0'>
+   <header>
+     <hbx_id>29035</hbx_id>
+     <submitted_timestamp>2016-11-08T17:44:49</submitted_timestamp>
+   </header>
+   <event>
+     <body>
+       <enrollment_event_body xmlns="http://openhbx.org/api/terms/1.0">
+         <affected_members>
+           <affected_member>
+             <member>
+               <id><id>1</id></id>
+             </member>
+             <benefit>
+               <premium_amount>465.13</premium_amount>
+               <begin_date>20190101</begin_date>
+             </benefit>
+           </affected_member>
+         </affected_members>
+         <enrollment xmlns="http://openhbx.org/api/terms/1.0">
+           <policy>
+             <id>
+               <id>123</id>
+             </id>
+           <enrollees>
+             <enrollee>
+               <member>
+                 <id><id>#{primary.authority_member.hbx_member_id}</id></id>
+               </member>
+               <is_subscriber>true</is_subscriber>
+               <benefit>
+                 <premium_amount>111.11</premium_amount>
+                 <begin_date>#{begin_date}</begin_date>
+               </benefit>
+             </enrollee>
+           </enrollees>
+           <enrollment>
+           <individual_market>
+             <assistance_effective_date>TOTALLY BOGUS</assistance_effective_date>
+             <applied_aptc_amount>100.00</applied_aptc_amount>
+           </individual_market>
+           <shop_market>
+             <employer_link>
+               <id><id>urn:openhbx:terms:v1:employer:id##{employer_id}</id></id>
+             </employer_link>
+           </shop_market>
+           <premium_total_amount>56.78</premium_total_amount>
+           <total_responsible_amount>123.45</total_responsible_amount>
+           </enrollment>
+           </policy>
+         </enrollment>
+         </enrollment_event_body>
+     </body>
+   </event>
+ </enrollment_event>
+  EVENTXML
+  }
+  let(:m_tag) { double('m_tag') }
+  let(:t_stamp) { double('t_stamp') }
+  let(:headers) { double('headers') }
+  let(:responder) { instance_double('::ExternalEvents::EventResponder') }
+
+  context "Dependent Add to renewal policy" do
+    let :subject do
+      ::ExternalEvents::EnrollmentEventNotification.new responder, m_tag, t_stamp, source_event_xml, headers
+    end
+    context "IVL: dep added to renewal policy" do
+      let(:kind) { 'individual' }
+      let(:begin_date) { Date.today.next_year.beginning_of_year.strftime("%Y%m%d") }
+      let(:employer_id) { nil }
+      let(:employer) { nil}
+      let(:coverage_end) { nil}
+
+      before do
+        allow(subject).to receive(:existing_plan).and_return(plan)
+        allow(subject).to receive(:is_shop?).and_return(false)
+      end
+
+      it "should return true" do
+        expect(subject.dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq true
+      end
+    end
+
+    context "IVL: dep adding to renewal policy and dependent start date not the renewal start date" do
+      let(:kind) { 'individual' }
+      let(:begin_date) { (Date.today.next_year.beginning_of_year + 1.month).strftime("%Y%m%d") }
+      let(:employer_id) { nil }
+      let(:employer) { nil}
+      let(:coverage_end) { nil}
+
+      before do
+        allow(subject).to receive(:existing_plan).and_return(plan)
+        allow(subject).to receive(:is_shop?).and_return(false)
+      end
+
+      it "should return false" do
+        expect(subject.dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+
+    context "SHOP: dep added to renewal policy" do
+      let(:kind) { 'shop' }
+      let(:begin_date) { Date.today.next_year.beginning_of_year.strftime("%Y%m%d") }
+      let(:employer) { FactoryGirl.create(:employer)}
+      let!(:plan_year) { FactoryGirl.create(:plan_year, employer: employer, start_date: Date.new(Date.today.year, 1, 1), end_date: Date.new(Date.today.year, 12, 31))}
+      let(:employer_id) { employer.hbx_id }
+      let(:coverage_end) { nil}
+
+      it "should return false" do
+        expect(subject.dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+
+    context "SHOP: dep added to renewal policy and dependent start date not the renewal start date" do
+      let(:kind) { 'shop' }
+      let(:begin_date) { (Date.today.next_year.beginning_of_year + 1.month).strftime("%Y%m%d") }
+      let(:employer) { FactoryGirl.create(:employer)}
+      let(:employer_id) { employer.hbx_id }
+      let(:coverage_end) { nil}
+
+      it "should return false" do
+        expect(subject.dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+
+    context "IVL: dep added to renewal policy and dependent not added to active policy" do
+      let(:kind) { 'individual' }
+      let(:begin_date) { Date.today.next_year.beginning_of_year.strftime("%Y%m%d") }
+      let(:employer_id) { nil }
+      let(:employer) { nil}
+      let(:coverage_end) { nil}
+
+      before do
+        allow(subject).to receive(:existing_plan).and_return(plan)
+        allow(subject).to receive(:is_shop?).and_return(false)
+        active_policy.update_attributes(enrollees: [active_enrollee1, active_enrollee2, active_enrollee3, active_enrollee4])
+      end
+
+      it "should return false" do
+        expect(subject.dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+  end
+
+  context "Dependent Drop to renewal policy" do
+    let :subject do
+      ::ExternalEvents::EnrollmentEventNotification.new responder, m_tag, t_stamp, source_event_xml2, headers
+    end
+    context "IVL: dep dropped to renewal policy" do
+      let(:kind) { 'individual' }
+      let(:begin_date) { Date.today.next_year.beginning_of_year.strftime("%Y%m%d") }
+      let(:employer_id) { nil }
+      let(:employer) { nil}
+      let(:coverage_end) { Date.today.beginning_of_month}
+
+      before do
+        allow(subject).to receive(:existing_plan).and_return(plan)
+        allow(subject).to receive(:is_shop?).and_return(false)
+      end
+
+      it "should return true" do
+        expect(subject.dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq true
+      end
+    end
+
+    context "IVL: dep dropped to renewal policy and dependent start date not the renewal start date" do
+      let(:kind) { 'individual' }
+      let(:begin_date) { (Date.today.next_year.beginning_of_year + 1.month).strftime("%Y%m%d") }
+      let(:employer_id) { nil }
+      let(:employer) { nil}
+      let(:coverage_end) { nil}
+
+      before do
+        allow(subject).to receive(:existing_plan).and_return(plan)
+        allow(subject).to receive(:is_shop?).and_return(false)
+      end
+
+      it "should return false" do
+        expect(subject.dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+
+    context "SHOP: dep dropped to renewal policy" do
+      let(:kind) { 'shop' }
+      let(:begin_date) { Date.today.next_year.beginning_of_year.strftime("%Y%m%d") }
+      let(:employer) { FactoryGirl.create(:employer)}
+      let!(:plan_year) { FactoryGirl.create(:plan_year, employer: employer, start_date: Date.new(Date.today.year, 1, 1), end_date: Date.new(Date.today.year, 12, 31))}
+      let(:employer_id) { employer.hbx_id }
+      let(:coverage_end) { nil}
+
+      it "should return false" do
+        expect(subject.dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+
+    context "SHOP: dep dropped to renewal policy and dependent start date not the renewal start date" do
+      let(:kind) { 'shop' }
+      let(:begin_date) { (Date.today.next_year.beginning_of_year + 1.month).strftime("%Y%m%d") }
+      let(:employer) { FactoryGirl.create(:employer)}
+      let(:employer_id) { employer.hbx_id }
+      let(:coverage_end) { nil}
+
+      it "should return false" do
+        expect(subject.dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+
+    context "IVL: dep dropped to renewal policy, and didn't dropped from active policy" do
+      let(:kind) { 'individual' }
+      let(:begin_date) { Date.today.next_year.beginning_of_year.strftime("%Y%m%d") }
+      let(:employer_id) { nil }
+      let(:employer) { nil}
+      let(:coverage_end) { nil}
+
+      before do
+        allow(subject).to receive(:existing_plan).and_return(plan)
+        allow(subject).to receive(:is_shop?).and_return(false)
+      end
+
+      it "should return false" do
+        expect(subject.dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+  end
+end
+
+describe "#plan_change_dep_add_or_drop_to_renewal_policy?", :dbclean => :after_each do
+  let(:eg_id) { '1' }
+  let(:carrier_id) { '2' }
+  let(:plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, :coverage_type => "health", year: Date.today.next_year.year) }
+  let(:plan2) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, :coverage_type => "health", year: Date.today.next_year.year) }
+  let(:active_plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, renewal_plan: plan2, :coverage_type => "health", year: Date.today.year) }
+  let!(:primary) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+  let!(:dep) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+
+  let!(:dep2) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+
+  let(:prim_coverage_start) { Date.today.next_year.beginning_of_year }
+  let(:dep_coverage_start) { Date.today.next_year.beginning_of_year }
+
+  let(:active_enrollee1) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: Date.today.beginning_of_year, coverage_end: '')}
+  let(:active_enrollee2) { Enrollee.new(m_id: dep.authority_member.hbx_member_id, rel_code: 'child', coverage_start: Date.today.beginning_of_month, coverage_end: coverage_end)}
+  let(:active_enrollee3) { Enrollee.new(m_id: dep2.authority_member.hbx_member_id, rel_code: 'child', coverage_start: Date.today.beginning_of_month, coverage_end: coverage_end)}
+
+  let(:renewal_enrollee1) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: prim_coverage_start, coverage_end: '')}
+  let(:renewal_enrollee2) { Enrollee.new(m_id: dep.authority_member.hbx_member_id, rel_code: 'child', coverage_start: dep_coverage_start, coverage_end: '')}
+
+  let!(:active_policy) {
+    policy =  FactoryGirl.create(:policy, enrollment_group_id: eg_id, employer: employer, hbx_enrollment_ids: ["123"], carrier_id: carrier_id, plan: active_plan, coverage_start: Date.today.beginning_of_month, coverage_end: nil, kind: kind)
+    policy.update_attributes(enrollees: [active_enrollee1, active_enrollee2, active_enrollee3])
+    policy.save
+    policy
+  }
+  let!(:renewal_policy) {
+    policy =  FactoryGirl.create(:policy, enrollment_group_id: eg_id, employer: employer, carrier_id: carrier_id, plan: plan, coverage_start: Date.today.next_year.beginning_of_year , coverage_end: nil, kind: kind,)
+    policy.update_attributes(enrollees: [renewal_enrollee1, renewal_enrollee2], hbx_enrollment_ids: ["123"])
+    policy.save
+    policy
+  }
+  let(:source_event_xml) { <<-EVENTXML
+   <enrollment_event xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns='http://openhbx.org/api/terms/1.0'>
+   <header>
+     <hbx_id>29035</hbx_id>
+     <submitted_timestamp>2016-11-08T17:44:49</submitted_timestamp>
+   </header>
+   <event>
+     <body>
+       <enrollment_event_body xmlns="http://openhbx.org/api/terms/1.0">
+         <affected_members>
+           <affected_member>
+             <member>
+               <id><id>1</id></id>
+             </member>
+             <benefit>
+               <premium_amount>465.13</premium_amount>
+               <begin_date>20190101</begin_date>
+             </benefit>
+           </affected_member>
+         </affected_members>
+         <enrollment xmlns="http://openhbx.org/api/terms/1.0">
+           <policy>
+             <id>
+               <id>123</id>
+             </id>
+           <enrollees>
+             <enrollee>
+               <member>
+                 <id><id>#{primary.authority_member.hbx_member_id}</id></id>
+               </member>
+               <is_subscriber>true</is_subscriber>
+               <benefit>
+                 <premium_amount>111.11</premium_amount>
+                 <begin_date>#{begin_date}</begin_date>
+               </benefit>
+             </enrollee>
+             <enrollee>
+               <member>
+                 <id><id>#{dep.authority_member.hbx_member_id}</id></id>
+               </member>
+               <is_subscriber>false</is_subscriber>
+               <benefit>
+                 <premium_amount>111.11</premium_amount>
+                 <begin_date>#{begin_date}</begin_date>
+               </benefit>
+             </enrollee>
+             <enrollee>
+               <member>
+                 <id><id>#{dep2.authority_member.hbx_member_id}</id></id>
+               </member>
+               <is_subscriber>false</is_subscriber>
+               <benefit>
+                 <premium_amount>111.11</premium_amount>
+                 <begin_date>#{begin_date}</begin_date>
+               </benefit>
+             </enrollee>
+           </enrollees>
+           <enrollment>
+           <individual_market>
+             <assistance_effective_date>TOTALLY BOGUS</assistance_effective_date>
+             <applied_aptc_amount>100.00</applied_aptc_amount>
+           </individual_market>
+           <shop_market>
+             <employer_link>
+               <id><id>urn:openhbx:terms:v1:employer:id##{employer_id}</id></id>
+             </employer_link>
+           </shop_market>
+           <premium_total_amount>56.78</premium_total_amount>
+           <total_responsible_amount>123.45</total_responsible_amount>
+           </enrollment>
+           </policy>
+         </enrollment>
+         </enrollment_event_body>
+     </body>
+   </event>
+ </enrollment_event>
+  EVENTXML
+  }
+  let(:source_event_xml2) { <<-EVENTXML
+   <enrollment_event xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns='http://openhbx.org/api/terms/1.0'>
+   <header>
+     <hbx_id>29035</hbx_id>
+     <submitted_timestamp>2016-11-08T17:44:49</submitted_timestamp>
+   </header>
+   <event>
+     <body>
+       <enrollment_event_body xmlns="http://openhbx.org/api/terms/1.0">
+         <affected_members>
+           <affected_member>
+             <member>
+               <id><id>1</id></id>
+             </member>
+             <benefit>
+               <premium_amount>465.13</premium_amount>
+               <begin_date>20190101</begin_date>
+             </benefit>
+           </affected_member>
+         </affected_members>
+         <enrollment xmlns="http://openhbx.org/api/terms/1.0">
+           <policy>
+             <id>
+               <id>123</id>
+             </id>
+             <enrollees>
+               <enrollee>
+                 <member>
+                   <id><id>#{primary.authority_member.hbx_member_id}</id></id>
+                 </member>
+                 <is_subscriber>true</is_subscriber>
+                 <benefit>
+                   <premium_amount>111.11</premium_amount>
+                   <begin_date>#{begin_date}</begin_date>
+                 </benefit>
+               </enrollee>
+            </enrollees>
+             <enrollment>
+             <individual_market>
+               <assistance_effective_date>TOTALLY BOGUS</assistance_effective_date>
+               <applied_aptc_amount>100.00</applied_aptc_amount>
+               </individual_market>
+             <shop_market>
+               <employer_link>
+                  <id><id>urn:openhbx:terms:v1:employer:id##{employer_id}</id></id>
+               </employer_link>
+             </shop_market>
+             <premium_total_amount>56.78</premium_total_amount>
+             <total_responsible_amount>123.45</total_responsible_amount>
+             </enrollment>
+             <is_active>true</is_active>
+           </policy>
+         </enrollment>
+         </enrollment_event_body>
+     </body>
+   </event>
+ </enrollment_event>
+  EVENTXML
+  }
+  let(:m_tag) { double('m_tag') }
+  let(:t_stamp) { double('t_stamp') }
+  let(:headers) { double('headers') }
+  let(:responder) { instance_double('::ExternalEvents::EventResponder') }
+
+  context "Dependent Add to renewal policy" do
+    let :subject do
+      ::ExternalEvents::EnrollmentEventNotification.new responder, m_tag, t_stamp, source_event_xml, headers
+    end
+    context "IVL: dep added to renewal policy" do
+      let(:kind) { 'individual' }
+      let(:begin_date) { Date.today.next_year.beginning_of_year.strftime("%Y%m%d") }
+      let(:employer_id) { nil }
+      let(:employer) { nil}
+      let(:coverage_end) { nil}
+
+      before do
+        allow(subject).to receive(:existing_plan).and_return(plan2)
+        allow(subject).to receive(:is_shop?).and_return(false)
+      end
+
+      it "should return true" do
+        expect(subject.plan_change_dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq true
+      end
+    end
+
+    context "IVL: dep adding to renewal policy and dependent start date not the renewal start date" do
+      let(:kind) { 'individual' }
+      let(:begin_date) { (Date.today.next_year.beginning_of_year + 1.month).strftime("%Y%m%d") }
+      let(:employer_id) { nil }
+      let(:employer) { nil}
+      let(:coverage_end) { nil}
+
+      before do
+        allow(subject).to receive(:existing_plan).and_return(plan2)
+        allow(subject).to receive(:is_shop?).and_return(false)
+      end
+
+      it "should return false" do
+        expect(subject.plan_change_dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+
+    context "SHOP: dep added to renewal policy" do
+      let(:kind) { 'shop' }
+      let(:begin_date) { Date.today.next_year.beginning_of_year.strftime("%Y%m%d") }
+      let(:employer) { FactoryGirl.create(:employer)}
+      let!(:plan_year) { FactoryGirl.create(:plan_year, employer: employer, start_date: Date.new(Date.today.year, 1, 1), end_date: Date.new(Date.today.year, 12, 31))}
+      let(:employer_id) { employer.hbx_id }
+      let(:coverage_end) { nil}
+
+      it "should return false" do
+        expect(subject.plan_change_dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+
+    context "SHOP: dep added to renewal policy and dependent start date not the renewal start date" do
+      let(:kind) { 'shop' }
+      let(:begin_date) { (Date.today.next_year.beginning_of_year + 1.month).strftime("%Y%m%d") }
+      let(:employer) { FactoryGirl.create(:employer)}
+      let(:employer_id) { employer.hbx_id }
+      let(:coverage_end) { nil}
+
+      it "should return false" do
+        expect(subject.plan_change_dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+  end
+
+  context "Dependent Drop to renewal policy" do
+    let :subject do
+      ::ExternalEvents::EnrollmentEventNotification.new responder, m_tag, t_stamp, source_event_xml2, headers
+    end
+    context "IVL: dep added to renewal policy" do
+      let(:kind) { 'individual' }
+      let(:begin_date) { Date.today.next_year.beginning_of_year.strftime("%Y%m%d") }
+      let(:employer_id) { nil }
+      let(:employer) { nil}
+      let(:coverage_end) { Date.today.beginning_of_month}
+
+      before do
+        allow(subject).to receive(:existing_plan).and_return(plan2)
+        allow(subject).to receive(:is_shop?).and_return(false)
+      end
+
+      it "should return true" do
+        expect(subject.plan_change_dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq true
+      end
+    end
+
+    context "IVL: dep adding to renewal policy and dependent start date not the renewal start date" do
+      let(:kind) { 'individual' }
+      let(:begin_date) { (Date.today.next_year.beginning_of_year + 1.month).strftime("%Y%m%d") }
+      let(:employer_id) { nil }
+      let(:employer) { nil}
+      let(:coverage_end) { nil}
+
+      before do
+        allow(subject).to receive(:existing_plan).and_return(plan2)
+        allow(subject).to receive(:is_shop?).and_return(false)
+      end
+
+      it "should return false" do
+        expect(subject.plan_change_dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+
+    context "SHOP: dep added to renewal policy" do
+      let(:kind) { 'shop' }
+      let(:begin_date) { Date.today.next_year.beginning_of_year.strftime("%Y%m%d") }
+      let(:employer) { FactoryGirl.create(:employer)}
+      let!(:plan_year) { FactoryGirl.create(:plan_year, employer: employer, start_date: Date.new(Date.today.year, 1, 1), end_date: Date.new(Date.today.year, 12, 31))}
+      let(:employer_id) { employer.hbx_id }
+      let(:coverage_end) { nil}
+
+      it "should return false" do
+        expect(subject.plan_change_dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+
+    context "SHOP: dep added to renewal policy and dependent start date not the renewal start date" do
+      let(:kind) { 'shop' }
+      let(:begin_date) { (Date.today.next_year.beginning_of_year + 1.month).strftime("%Y%m%d") }
+      let(:employer) { FactoryGirl.create(:employer)}
+      let(:employer_id) { employer.hbx_id }
+      let(:coverage_end) { nil}
+
+      it "should return false" do
+        expect(subject.plan_change_dep_add_or_drop_to_renewal_policy?(active_policy, renewal_policy)).to eq false
+      end
+    end
+  end
+end
+
+describe "#is_retro_renewal_policy?", :dbclean => :after_each do
+  let(:eg_id) { '1' }
+  let(:carrier_id) { '2' }
+  let(:plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, :coverage_type => "health", year: Date.today.next_year.year) }
+  let(:active_plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, renewal_plan: plan, :coverage_type => "health", year: Date.today.year) }
+  let!(:primary) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+  let!(:dep) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+  let(:prim_coverage_start) { Date.today.next_year.beginning_of_year }
+  let(:dep_coverage_start) { Date.today.next_year.beginning_of_year }
+
+  let(:active_enrollee1) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: Date.today.beginning_of_year, coverage_end: coverage_end)}
+  let(:active_enrollee2) { Enrollee.new(m_id: dep.authority_member.hbx_member_id, rel_code: 'child', coverage_start: Date.today.beginning_of_month, coverage_end: coverage_end)}
+
+  let(:renewal_enrollee1) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: prim_coverage_start, coverage_end: '')}
+  let(:renewal_enrollee2) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'child', coverage_start: dep_coverage_start, coverage_end: '')}
+
+  let!(:active_policy) {
+    policy =  FactoryGirl.create(:policy, enrollment_group_id: eg_id, employer: employer, hbx_enrollment_ids: ["123"], carrier_id: carrier_id, plan: active_plan, coverage_start: Date.today.beginning_of_month, coverage_end: coverage_end, kind: kind)
+    policy.update_attributes(enrollees: [active_enrollee1, active_enrollee2])
+    policy.save
+    policy
+  }
+  let!(:renewal_policy) {
+    policy =  FactoryGirl.create(:policy, enrollment_group_id: eg_id, employer: employer, carrier_id: carrier_id, plan: plan, coverage_start: Date.today.next_year.beginning_of_year , coverage_end: nil, kind: kind,)
+    policy.update_attributes(enrollees: [renewal_enrollee1, renewal_enrollee2], hbx_enrollment_ids: ["123"])
+    policy.save
+    policy
+  }
+
+  let(:source_event_xml) { <<-EVENTXML
+   <enrollment_event xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns='http://openhbx.org/api/terms/1.0'>
+   <header>
+     <hbx_id>29035</hbx_id>
+     <submitted_timestamp>2016-11-08T17:44:49</submitted_timestamp>
+   </header>
+   <event>
+     <body>
+       <enrollment_event_body xmlns="http://openhbx.org/api/terms/1.0">
+         <affected_members>
+           <affected_member>
+             <member>
+               <id><id>1</id></id>
+             </member>
+             <benefit>
+               <premium_amount>465.13</premium_amount>
+               <begin_date>20190101</begin_date>
+             </benefit>
+           </affected_member>
+         </affected_members>
+         <enrollment xmlns="http://openhbx.org/api/terms/1.0">
+           <policy>
+             <id>
+               <id>123</id>
+             </id>
+           <enrollees>
+             <enrollee>
+               <member>
+                 <id><id>#{primary.authority_member.hbx_member_id}</id></id>
+               </member>
+               <is_subscriber>true</is_subscriber>
+               <benefit>
+                 <premium_amount>111.11</premium_amount>
+                 <begin_date>#{Date.today.next_year.beginning_of_year.strftime("%Y%m%d")}</begin_date>
+               </benefit>
+             </enrollee>
+             <enrollee>
+               <member>
+                 <id><id>#{dep.authority_member.hbx_member_id}</id></id>
+               </member>
+               <is_subscriber>true</is_subscriber>
+               <benefit>
+                 <premium_amount>111.11</premium_amount>
+                 <begin_date>#{Date.today.next_year.beginning_of_year.strftime("%Y%m%d")}</begin_date>
+               </benefit>
+             </enrollee>
+           </enrollees>
+           <enrollment>
+           <individual_market>
+             <assistance_effective_date>TOTALLY BOGUS</assistance_effective_date>
+             <applied_aptc_amount>100.00</applied_aptc_amount>
+           </individual_market>
+           <shop_market>
+             <employer_link>
+               <id><id>urn:openhbx:terms:v1:employer:id##{employer_id}</id></id>
+             </employer_link>
+           </shop_market>
+           <premium_total_amount>56.78</premium_total_amount>
+           <total_responsible_amount>123.45</total_responsible_amount>
+           </enrollment>
+           </policy>
+         </enrollment>
+         </enrollment_event_body>
+     </body>
+   </event>
+ </enrollment_event>
+  EVENTXML
+  }
+  let(:m_tag) { double('m_tag') }
+  let(:t_stamp) { double('t_stamp') }
+  let(:headers) { double('headers') }
+  let(:responder) { instance_double('::ExternalEvents::EventResponder') }
+  let :subject do
+    ::ExternalEvents::EnrollmentEventNotification.new responder, m_tag, t_stamp, source_event_xml, headers
+  end
+
+  context "IVL: renewal policy with initial event has contiguous active coverage" do
+    let(:kind) { 'individual' }
+    let(:employer_id) { nil }
+    let(:employer) { nil}
+    let(:coverage_end) { nil}
+
+    before do
+      allow(subject).to receive(:existing_plan).and_return(plan)
+    end
+
+    it "should return true" do
+      expect(subject.is_retro_renewal_policy?).to eq true
+    end
+  end
+
+  context "IVL: renewal policy with initial event has no contiguous active coverage" do
+    let(:kind) { 'individual' }
+    let(:dep_coverage_start) { Date.today.next_year.beginning_of_year + 1.month }
+    let(:employer) { nil}
+    let(:employer_id) { nil }
+    let(:coverage_end) { Date.today.end_of_month}
+
+    before do
+      allow(subject).to receive(:existing_plan).and_return(plan)
+    end
+
+    it "should return false" do
+      expect(subject.is_retro_renewal_policy?).to eq false
+    end
+  end
+
+  context "SHOP: renewal policy with initial event has contiguous active coverage" do
+    let(:kind) { 'shop' }
+    let(:employer) { FactoryGirl.create(:employer)}
+    let!(:plan_year) { FactoryGirl.create(:plan_year, employer: employer, start_date: Date.new(Date.today.year, 1, 1), end_date: Date.new(Date.today.year, 12, 31))}
+    let(:employer_id) { employer.hbx_id }
+    let(:coverage_end) { nil}
+
+    it "should return false" do
+      expect(subject.is_retro_renewal_policy?).to eq false
+    end
+  end
+
+  context "SHOP: renewal policy with initial event has contiguous active coverage" do
+    let(:kind) { 'shop' }
+    let(:employer) { FactoryGirl.create(:employer)}
+    let(:employer_id) { employer.hbx_id }
+    let(:dep_coverage_start) { Date.today.next_year.beginning_of_year + 1.month }
+    let(:coverage_end) { nil}
+
+    it "should return false" do
+      expect(subject.is_retro_renewal_policy?).to eq false
     end
   end
 end

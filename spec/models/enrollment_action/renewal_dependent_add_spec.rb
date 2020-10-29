@@ -167,6 +167,7 @@ describe EnrollmentAction::RenewalDependentAdd, "#publish" do
     allow(action_helper).to receive(:keep_member_ends).with([]).and_return(true)
     allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, renewal_dependent_add_event.hbx_enrollment_id, renewal_dependent_add_event.employer_hbx_id)
     allow(subject.class).to receive(:same_carrier_renewal_candidates).with(renewal_dependent_add_event).and_return([renewal_enrollees])
+    allow(renewal_dependent_add_event).to receive(:renewal_cancel_policy).and_return([])
   end
 
   it "publishes an event of type renew dependent add" do
@@ -187,5 +188,26 @@ describe EnrollmentAction::RenewalDependentAdd, "#publish" do
   it "publishes the xml to edi" do
     expect(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, 1, 1)
     subject.publish
+  end
+
+  context "carrier with canceled_renewal_causes_new_coverage" do
+    let(:carrier) { instance_double(Carrier, :canceled_renewal_causes_new_coverage => true) }
+    let(:policy) { instance_double(Policy, :carrier => carrier) }
+
+    before do
+      allow(EnrollmentAction::ActionPublishHelper).to receive(:new).with(event_xml).and_return(action_helper)
+      allow(action_helper).to receive(:filter_affected_members).with([2]).and_return(true)
+      allow(action_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#active_renew_member_add").and_return(true)
+      allow(action_helper).to receive(:keep_member_ends).with([]).and_return(true)
+      allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, renewal_dependent_add_event.hbx_enrollment_id, renewal_dependent_add_event.employer_hbx_id)
+      allow(subject.class).to receive(:same_carrier_renewal_candidates).with(renewal_dependent_add_event).and_return([renewal_enrollees])
+      allow(renewal_dependent_add_event).to receive(:renewal_cancel_policy).and_return(true)
+      allow(renewal_dependent_add_event).to receive(:existing_policy).and_return(policy)
+    end
+
+    it "publishes an event of type initial" do
+      expect(action_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#initial")
+      subject.publish
+    end
   end
 end
