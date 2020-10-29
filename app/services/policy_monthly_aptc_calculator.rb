@@ -26,13 +26,15 @@ module Services
     	end
     	
       aptc_dates << calender_month_begin if @policy_disposition.start_date <= calender_month_begin
-    	policy.enrollees.each do |enrollee|
-    	  next if enrollee.canceled? || enrollee.coverage_start.blank?
-    	  aptc_dates << enrollee.coverage_start if (calender_month_begin..calender_month_end).cover?(enrollee.coverage_start)
-        if (calender_month_begin..calender_month_end).cover?(enrollee.coverage_end) && enrollee.coverage_end != calender_month_end
-          aptc_dates << (enrollee.coverage_end + 1.day)
+      if policy.aptc_credits.count > 0
+        policy.aptc_credits.each do |aptc_credit|
+          next if aptc_credit.start_on.nil?
+          aptc_dates << aptc_credit.start_on if (calender_month_begin..calender_month_end).cover?(aptc_credit.start_on)
+          if (calender_month_begin..calender_month_end).cover?(aptc_credit.end_on) && aptc_credit.end_on != calender_month_end
+            aptc_dates << (aptc_credit.end_on + 1.day)
+          end
         end
-    	end
+      end
       
       applied_aptc_dates = aptc_dates.compact.uniq.sort
       applied_aptc_dates.each_with_index.collect do |date, index|

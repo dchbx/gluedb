@@ -230,7 +230,14 @@ module Generators::Reports
 
         if @notice.has_aptc
           silver_plan_premium = policy_slcsp_premium_calculator.ehb_premium_for(i)
-          aptc_amt = policy_monthly_aptc_calculator.applied_aptc_amount_for(i)
+          given_aptc_amt = premium_amount
+          max_aptc_amt = policy_monthly_aptc_calculator.applied_aptc_amount_for(i)
+
+          if given_aptc_amt > max_aptc_amt
+            aptc_amt = max_aptc_amt
+          else
+            aptc_amt = given_aptc_amt
+          end
 
           # Prorated Start Dates
           if @policy_disposition.start_date.month == i && has_middle_of_month_coverage_begin

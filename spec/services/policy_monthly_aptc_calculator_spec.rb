@@ -33,8 +33,8 @@ describe Services::PolicyMonthlyAptcCalculator, :dbclean => :after_each do
   let(:policy_disposition) {PolicyDisposition.new(policy)}
   subject(:monthly_aptc_calculator) { Services::PolicyMonthlyAptcCalculator.new(policy_disposition: policy_disposition, calender_year: calender_year)}
 
-  context 'subscriber and a dependent on a policy with same start date' do
-    it 'returns the policy premium amount' do
+  context 'subscriber and a dependent on a policy with same start date and with same aptc amounts' do
+    it 'returns the policy applied_aptc' do
       expect(monthly_aptc_calculator.applied_aptc_amount_for(1).round(2)).to eq policy_disposition.as_of(coverage_start).applied_aptc
       expect(monthly_aptc_calculator.applied_aptc_amount_for(4).round(2)).to eq policy.applied_aptc
     end
@@ -52,7 +52,7 @@ describe Services::PolicyMonthlyAptcCalculator, :dbclean => :after_each do
     }
     let(:aptc_prorated_amount) {((100.00/31 * 15) + (50.00/31 * 16)).round(2)}
 
-    it 'return applied_aptc amount as Aptc dates not changed' do
+    it 'return applied_aptc amount as Aptc dates are not changed' do
       expect(policy.enrollees.count).to eq 2
       expect(policy_disposition.as_of(coverage_start).applied_aptc).to eq 100.00
       expect(policy_disposition.as_of(Date.new(calender_year, 4, 1)).applied_aptc).to eq 50.00
@@ -72,7 +72,7 @@ describe Services::PolicyMonthlyAptcCalculator, :dbclean => :after_each do
     end
   end
 
-  context 'A child droped on a policy in middle of the month' do
+  context 'A child dropped on a policy in middle of the month' do
     let(:prorated_amount) {((250.00/31 * 15) + (500.00/31 * 16)).round(2)}
     let!(:enrollee3) { Enrollee.new(rel_code: 'child', coverage_start: coverage_start, coverage_end: Date.new(calender_year,3,15), pre_amt: '100.0', cp_id: '123456') }
     let!(:aptc_credits1) { [aptc_credit3, aptc_credit4] }
@@ -88,7 +88,7 @@ describe Services::PolicyMonthlyAptcCalculator, :dbclean => :after_each do
     }
     let(:aptc_prorated_amount) {((50.00/31 * 15) + (100.00/31 * 16)).round(2)}
 
-    it 'return applied_aptc amount as Aptc dates not changed' do
+    it 'return applied_aptc amount as Aptc dates are not changed' do
       expect(policy.enrollees.count).to eq 2
       expect(policy_disposition.as_of(coverage_start).applied_aptc).to eq 50.00
       expect(policy_disposition.as_of(Date.new(calender_year, 4, 1)).applied_aptc).to eq 100.00
