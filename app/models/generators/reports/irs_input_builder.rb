@@ -226,12 +226,12 @@ module Generators::Reports
           premium_amount: premium_amount
         }
 
-        @notice.has_aptc = policy_monthly_aptc_calculator.applied_aptc_amount_for(i) > 0
+        max_aptc_amt = policy_monthly_aptc_calculator.max_aptc_amount_for(i)
+        @notice.has_aptc = max_aptc_amt > 0
 
         if @notice.has_aptc
           silver_plan_premium = policy_slcsp_premium_calculator.ehb_premium_for(i)
           given_aptc_amt = premium_amount
-          max_aptc_amt = policy_monthly_aptc_calculator.applied_aptc_amount_for(i)
 
           if given_aptc_amt > max_aptc_amt
             aptc_amt = max_aptc_amt

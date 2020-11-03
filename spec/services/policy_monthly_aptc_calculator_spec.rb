@@ -35,8 +35,8 @@ describe Services::PolicyMonthlyAptcCalculator, :dbclean => :after_each do
 
   context 'subscriber and a dependent on a policy with same start date and with same aptc amounts' do
     it 'returns the policy applied_aptc' do
-      expect(monthly_aptc_calculator.applied_aptc_amount_for(1).round(2)).to eq policy_disposition.as_of(coverage_start).applied_aptc
-      expect(monthly_aptc_calculator.applied_aptc_amount_for(4).round(2)).to eq policy.applied_aptc
+      expect(monthly_aptc_calculator.max_aptc_amount_for(1).round(2)).to eq policy_disposition.as_of(coverage_start).applied_aptc
+      expect(monthly_aptc_calculator.max_aptc_amount_for(4).round(2)).to eq policy.applied_aptc
     end
   end
 
@@ -56,8 +56,8 @@ describe Services::PolicyMonthlyAptcCalculator, :dbclean => :after_each do
       expect(policy.enrollees.count).to eq 2
       expect(policy_disposition.as_of(coverage_start).applied_aptc).to eq 100.00
       expect(policy_disposition.as_of(Date.new(calender_year, 4, 1)).applied_aptc).to eq 50.00
-      expect(monthly_aptc_calculator.applied_aptc_amount_for(1).round(2)).to eq 100.00
-      expect(monthly_aptc_calculator.applied_aptc_amount_for(4).round(2)).to eq 50.00
+      expect(monthly_aptc_calculator.max_aptc_amount_for(1).round(2)).to eq 100.00
+      expect(monthly_aptc_calculator.max_aptc_amount_for(4).round(2)).to eq 50.00
     end
 
     it 'returns the aptc prorated amount in the 3rd month of the calender_year' do
@@ -66,9 +66,9 @@ describe Services::PolicyMonthlyAptcCalculator, :dbclean => :after_each do
       expect(policy.enrollees.count).to eq 2
       expect(policy_disposition.as_of(coverage_start).applied_aptc).to eq 100.00
       expect(policy_disposition.as_of(Date.new(calender_year, 4, 1)).applied_aptc).to eq 50.00
-      expect(monthly_aptc_calculator.applied_aptc_amount_for(1).round(2)).to eq 100.00
-      expect(monthly_aptc_calculator.applied_aptc_amount_for(3).round(2)).to eq aptc_prorated_amount
-      expect(monthly_aptc_calculator.applied_aptc_amount_for(4).round(2)).to eq 50.00
+      expect(monthly_aptc_calculator.max_aptc_amount_for(1).round(2)).to eq 100.00
+      expect(monthly_aptc_calculator.max_aptc_amount_for(3).round(2)).to eq aptc_prorated_amount
+      expect(monthly_aptc_calculator.max_aptc_amount_for(4).round(2)).to eq 50.00
     end
   end
 
@@ -92,8 +92,8 @@ describe Services::PolicyMonthlyAptcCalculator, :dbclean => :after_each do
       expect(policy.enrollees.count).to eq 2
       expect(policy_disposition.as_of(coverage_start).applied_aptc).to eq 50.00
       expect(policy_disposition.as_of(Date.new(calender_year, 4, 1)).applied_aptc).to eq 100.00
-      expect(monthly_aptc_calculator.applied_aptc_amount_for(1).round(2)).to eq 50.00
-      expect(monthly_aptc_calculator.applied_aptc_amount_for(4).round(2)).to eq 100.00
+      expect(monthly_aptc_calculator.max_aptc_amount_for(1).round(2)).to eq 50.00
+      expect(monthly_aptc_calculator.max_aptc_amount_for(4).round(2)).to eq 100.00
     end
 
     it 'returns the aptc prorated amount in the 3rd month of the calender_year' do
@@ -102,9 +102,9 @@ describe Services::PolicyMonthlyAptcCalculator, :dbclean => :after_each do
       expect(policy.enrollees.count).to eq 2
       expect(policy_disposition.as_of(coverage_start).applied_aptc).to eq 50.00
       expect(policy_disposition.as_of(Date.new(calender_year, 4, 1)).applied_aptc).to eq 100.00
-      expect(monthly_aptc_calculator.applied_aptc_amount_for(1).round(2)).to eq 50.00
-      expect(monthly_aptc_calculator.applied_aptc_amount_for(3).round(2)).to eq aptc_prorated_amount
-      expect(monthly_aptc_calculator.applied_aptc_amount_for(4).round(2)).to eq 100.00
+      expect(monthly_aptc_calculator.max_aptc_amount_for(1).round(2)).to eq 50.00
+      expect(monthly_aptc_calculator.max_aptc_amount_for(3).round(2)).to eq aptc_prorated_amount
+      expect(monthly_aptc_calculator.max_aptc_amount_for(4).round(2)).to eq 100.00
     end
   end
 end
