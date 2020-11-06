@@ -56,7 +56,7 @@ module Services
     end
 
     def max_aptc_value(date)
-      policy_aptc_credit = @policy_disposition.policy.aptc_credits.select{|aptc_credit| aptc_credit.start_on == date}.first
+      policy_aptc_credit = @policy_disposition.policy.aptc_credits.select {|aptc_credit| (aptc_credit.start_on..aptc_credit.end_on).cover?(date)}.first
       policy_aptc_credit.present? ? policy_aptc_credit.aptc : @policy_disposition.as_of(date).applied_aptc
     end
 
