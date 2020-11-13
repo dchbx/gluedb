@@ -231,7 +231,7 @@ module Generators::Reports
 
         if @notice.has_aptc
           silver_plan_premium = policy_slcsp_premium_calculator.ehb_premium_for(i)
-          given_aptc_amt = premium_amount
+          given_aptc_amt = policy_monthly_premium_calculator.ehb_premium_for(i)
 
           if given_aptc_amt > max_aptc_amt
             aptc_amt = max_aptc_amt
@@ -239,21 +239,9 @@ module Generators::Reports
             aptc_amt = given_aptc_amt
           end
 
-          # Prorated Start Dates
-          if @policy_disposition.start_date.month == i && has_middle_of_month_coverage_begin
-            aptc_amt = as_dollars(((@policy_disposition.start_date.end_of_month.day.to_f - @policy_disposition.start_date.day.to_f + 1.0) / @policy_disposition.start_date.end_of_month.day) * aptc_amt)
-          end
-
-          if coverage_end_month == i && has_middle_of_month_coverage_end
-            aptc_amt = as_dollars((@policy_disposition.end_date.day.to_f / @policy_disposition.end_date.end_of_month.day) * aptc_amt)
-          end
-
           # NPT's
 
           if npt_policy
-            if coverage_end_month == i && (has_middle_of_month_coverage_end || @policy_disposition.end_date != @policy_disposition.end_date.end_of_month)
-              aptc_amt = as_dollars((@policy_disposition.end_date.day.to_f / @policy_disposition.end_date.end_of_month.day) * aptc_amt)
-            end
 
             if has_middle_of_month_coverage_end
               if (coverage_end_month - 1) == i
