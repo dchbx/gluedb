@@ -1,12 +1,6 @@
 name: RSpec
 on: push
 
-env:
-  SHA: ${{ github.sha }}
-  BRANCH: ${{ github.ref }}
-  YELLR_KEY: ${{ secrets.YELLR_KEY }}
-  YELLR_URL: ${{ secrets.YELLR_URL }}
-
 jobs:
   rspec:
     runs-on: ubuntu-16.04
@@ -24,10 +18,10 @@ jobs:
         with:
           mongoDBVersion: 3.4
       - name: Setup Node.js for use with actions
-        uses: actions/setup-node@v1.1.0
+        uses: actions/setup-node@v2.1.2
         with:
           # Version Spec of the version to use.  Examples: 10.x, 10.15.1, >=10.15.0, lts
-          version: 9.11.1
+          node-version: 9.11.1
       - uses: actions/checkout@v2
       - name: Cache Gems
         uses: actions/cache@v1
@@ -46,17 +40,3 @@ jobs:
         run: |
           cp config/exchange.yml.example config/exchange.yml
           bundle exec rspec
-      - name: tell Yellr of failure
-        if: failure()
-        env:
-          STATUS: failing
-        run: |
-          chmod +x ./test_utilities/report_to_yellr.sh
-          ./test_utilities/report_to_yellr.sh
-      - name: tell Yellr of success
-        if: success()
-        env:
-          STATUS: passing
-        run: |
-          chmod +x ./test_utilities/report_to_yellr.sh
-          ./test_utilities/report_to_yellr.sh
