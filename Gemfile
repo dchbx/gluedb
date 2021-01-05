@@ -6,7 +6,7 @@ gem 'rails', '3.2.22.5'
 gem "mongoid", "~> 3.1.7"
 gem "origin", "~> 1.1.0"
 gem "aasm", "~> 3.0.26"
-gem "nokogiri", "~> 1.6.8.1"
+gem "nokogiri", "~> 1.11.0.0"
 gem "bunny", '1.4.1'
 gem 'amq-protocol', '2.0.1'
 gem 'jquery-rails', '3.1.3'
@@ -83,7 +83,7 @@ gem 'cancancan', '~> 1.15.0'
 gem 'oj', "~> 2.18.0"
 gem 'roo', '2.1.0'
 gem 'bh', "~> 1.3.6"
-gem 'nokogiri-happymapper', "~> 0.5.9", :require => 'happymapper'
+gem 'nokogiri-happymapper', '~> 0.5.9', :require => 'happymapper'
 # Upgraded prawn to fix inverted text issue, Ref: https://github.com/prawnpdf/prawn-templates/issues/19
 gem 'prawn', '~> 2.2'
 gem 'prawn-templates', '~> 0.1.2'
