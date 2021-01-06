@@ -442,10 +442,9 @@ module ExternalEvents
       return false if pol.subscriber.blank?
       return false if pol.subscriber.m_id != subscriber_id
       return false if pol.plan.blank?
-      return false unless existing_plan.carrier_id == pol.plan.carrier_id
       return false unless existing_plan.coverage_type == pol.plan.coverage_type
       return false unless existing_plan.year + 1 == pol.plan.year
-      return false unless plan_matched?(existing_plan, pol.plan)
+      return false unless plan_matched?(existing_plan, pol.plan) || existing_plan.carrier_id == pol.plan.carrier_id
       return false if (pol.active_member_ids - all_member_ids).any?
       return false if (all_member_ids - pol.active_member_ids).any?
       return false if pol.subscriber.coverage_end.present?

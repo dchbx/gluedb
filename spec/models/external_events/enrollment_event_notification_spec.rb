@@ -910,6 +910,7 @@ describe "#renewal_policies_to_cancel", :dbclean => :after_each do
   let(:eg_id) { '1' }
   let(:carrier_id) { '2' }
   let(:plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, hios_plan_id: 123 ,:coverage_type => "health", year: Date.today.next_year.year) }
+  let(:same_carrier_plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, hios_plan_id: 123 ,:coverage_type => "health", year: Date.today.next_year.year) }
   let(:active_plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, hios_plan_id: 123, renewal_plan: plan, :coverage_type => "health", year: Date.today.year) }
   let(:dental_plan) { Plan.create!(:name => "test_plan", carrier_id: carrier_id, :coverage_type => "dental", year: Date.today.next_year.year) }
   let(:catastrophic_active_plan) { Plan.create!(:name => "test_plan", metal_level: 'catastrophic', hios_plan_id: '94506DC0390008', carrier_id: carrier_id, renewal_plan: plan, :coverage_type => "health", year: Date.today.year) }
@@ -1034,6 +1035,24 @@ describe "#renewal_policies_to_cancel", :dbclean => :after_each do
 
     it "should return renewal policy" do
       expect(renewal_policy.is_shop?).to eq false
+      expect(subject.renewal_policies_to_cancel).to eq([renewal_policy])
+    end
+  end
+
+  context "IVL renewal policy with same carrier plan" do
+    let(:kind) { 'individual' }
+    let(:coverage_end) { nil}
+    let(:employer_id) { nil }
+    let(:employer) { nil}
+    before do
+      allow(subject).to receive(:existing_plan).and_return(active_plan)
+      renewal_policy.plan = same_carrier_plan
+      renewal_policy.save
+    end
+
+    it "should return renewal policy" do
+      expect(renewal_policy.is_shop?).to eq false
+      expect(active_term_policy.plan.renewal_plan).not_to eq same_carrier_plan
       expect(subject.renewal_policies_to_cancel).to eq([renewal_policy])
     end
   end

@@ -279,7 +279,7 @@ describe "given renewal event, dependent drop from IVL renewal policy", :dbclean
                   <id>#{plan.hios_plan_id}</id>
                </id>
                <name>BluePreferred PPO Standard Platinum $0</name>
-               <active_year>2021</active_year>
+               <active_year>#{plan.year}</active_year>
                <is_dental_only>false</is_dental_only>
                <carrier>
                  <id>
@@ -361,7 +361,7 @@ describe "given renewal event, dependent drop from IVL renewal policy", :dbclean
                   <id>#{plan.hios_plan_id}</id>
                </id>
                <name>BluePreferred PPO Standard Platinum $0</name>
-               <active_year>2021</active_year>
+               <active_year>#{plan.year}</active_year>
                <is_dental_only>false</is_dental_only>
                <carrier>
                  <id>
