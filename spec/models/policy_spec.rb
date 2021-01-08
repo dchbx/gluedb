@@ -798,3 +798,109 @@ describe '.termination_event_exempt_from_notification?', :dbclean => :after_each
     end
   end
 end
+
+describe "#cancel_renewal", :dbclean => :after_each do
+  let(:eg_id) { '1' }
+  let(:carrier) {Carrier.create!(:termination_cancels_renewal => true)}
+  let(:plan) { Plan.create!(:name => "test_plan", carrier_id: carrier.id, hios_plan_id: 123 ,:coverage_type => "health", year: Date.today.next_year.year) }
+  let(:active_plan) { Plan.create!(:name => "test_plan", carrier_id: carrier.id, hios_plan_id: 123, renewal_plan: plan, :coverage_type => "health", year: Date.today.year) }
+  let(:catastrophic_active_plan) { Plan.create!(:name => "test_plan", metal_level: 'catastrophic', hios_plan_id: '94506DC0390008', carrier_id: carrier.id, renewal_plan: plan, :coverage_type => "health", year: Date.today.year) }
+  let!(:primary) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+  let(:coverage_start) { Date.today.next_year.beginning_of_year }
+  let(:enrollee) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: Date.today.beginning_of_month)}
+  let(:enrollee2) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: Date.today.next_year.beginning_of_year, coverage_end: coverage_end)}
+
+  let!(:active_policy) {
+    policy = FactoryGirl.create(:policy, enrollment_group_id: eg_id, employer: employer,
+                                 hbx_enrollment_ids: ["123"], carrier: carrier,
+                                 plan: active_plan,
+                                 coverage_start: Date.today.beginning_of_month, kind: kind)
+    policy.update_attributes(enrollees: [enrollee], hbx_enrollment_ids: ["123"])
+    policy.save
+    policy
+  }
+  let!(:renewal_policy) {
+    policy = FactoryGirl.create(:policy, enrollment_group_id: eg_id,
+                                 employer: employer, carrier: carrier, plan: plan,
+                                 coverage_start: Date.today.next_year.beginning_of_year,
+                                 coverage_end: coverage_end, kind: kind)
+  policy.update_attributes(enrollees: [enrollee2])
+  policy.save
+  policy
+  }
+
+  context "IVL: with renewal policy" do
+    let(:kind) { 'individual' }
+    let(:coverage_end) { nil}
+    let(:employer_id) { nil }
+    let(:employer) { nil}
+
+    it "should cancel renewal policy on terminating active policy" do
+      expect(active_policy.matched_ivl_renewals).to eq [renewal_policy]
+      active_policy.terminate_as_of(renewal_policy.coverage_year.end)
+      renewal_policy.reload
+      expect(renewal_policy.is_shop?).to eq false
+      expect(renewal_policy.canceled?).to eq true
+    end
+  end
+
+  context "IVL with catastrophic plan : with renewal policy" do
+    let(:kind) { 'individual' }
+    let(:coverage_end) { nil}
+    let(:employer_id) { nil }
+    let(:employer) { nil}
+    before do
+      active_policy.plan = catastrophic_active_plan
+      active_policy.save
+    end
+
+    it "should cancel renewal policy on terminating active policy" do
+      expect(active_policy.matched_ivl_renewals).to eq [renewal_policy]
+      active_policy.terminate_as_of(renewal_policy.coverage_year.end)
+      renewal_policy.reload
+      expect(renewal_policy.is_shop?).to eq false
+      expect(renewal_policy.canceled?).to eq true
+    end
+  end
+
+  context "IVL: without renewal policy" do
+    let(:kind) { 'individual' }
+    let(:coverage_end) { Date.today.next_year.beginning_of_year }
+    let(:employer_id) { nil }
+    let(:employer) { nil}
+
+
+    it "should return empty array" do
+      expect(active_policy.matched_ivl_renewals).to eq []
+    end
+  end
+
+  context "SHOP: with renewal policy" do
+    let(:kind) { 'shop' }
+    let(:coverage_end) { nil }
+    let(:employer) { FactoryGirl.create(:employer)}
+    let!(:plan_year) { FactoryGirl.create(:plan_year, employer: employer, start_date: Date.new(Date.today.year, 1, 1), end_date: Date.new(Date.today.year, 12, 31))}
+    let(:employer_id) { employer.hbx_id }
+
+    it "should not return renewal policy" do
+      expect(renewal_policy.is_shop?).to eq true
+      expect(active_policy.matched_ivl_renewals).to eq []
+    end
+  end
+
+  context "SHOP: without renewal policy" do
+    let(:kind) { 'shop' }
+    let(:coverage_end) { Date.today.next_year.beginning_of_year  }
+    let(:employer) { FactoryGirl.create(:employer)}
+    let(:employer_id) { employer.hbx_id }
+
+    it "should return empty array when checked for renewal policy" do
+      expect(renewal_policy.is_shop?).to eq true
+      expect(active_policy.matched_ivl_renewals).to eq []
+    end
+  end
+end
