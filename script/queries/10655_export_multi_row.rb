@@ -9,9 +9,12 @@ csv << %w(family.eg_id policy.eg_id hbx_enrollment.policy.policy_start policy.aa
         person.authority_member.is_state_resident is_dependent is_responsible_party?)
 
 def add_to_csv(csv, policy, person, is_dependent=false, is_responsible_party=false)
-  csv << ["FAMILY_ID", policy.eg_id, policy.policy_start, policy.aasm_state, policy.plan.coverage_type, policy.plan.metal_level, person.authority_member_id,
-          person.authority_member.try(:is_incarcerated), person.authority_member.try(:citizen_status),
-          person.authority_member.try(:is_state_resident)] + [is_dependent, is_responsible_party]
+  member = person.authority_member
+  citizen_status = (member.try(:citizen_status) == 'alien_lawfully_present') ? 'lawfully_present' : member.try(:citizen_status)
+
+  csv << ["FAMILY_ID", policy.eg_id, policy.policy_start, policy.aasm_state, policy.plan.coverage_type, policy.plan.metal_level,
+          person.authority_member_id, member.try(:is_incarcerated), citizen_status,
+          member.try(:is_state_resident)] + [is_dependent, is_responsible_party]
 end
 
 while offset < policy_count
