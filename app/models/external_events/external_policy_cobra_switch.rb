@@ -40,7 +40,7 @@ module ExternalEvents
         :pre_amt_tot => extract_pre_amt_tot,
         :tot_res_amt => extract_tot_res_amt,
         :tot_emp_res_amt => tot_emp_res_amt,
-        :aasm_state => "submitted"
+        :aasm_state => "resubmitted"
       })
       @existing_policy.hbx_enrollment_ids << extract_enrollment_group_id(@policy_node)
       result = @existing_policy.save!

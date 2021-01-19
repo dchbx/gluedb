@@ -7,7 +7,7 @@ describe EnrollmentAction::MarketChange, "Market Change" do
   let(:member_ids) { [1,2] }
 
   let(:event_1) { instance_double(ExternalEvents::EnrollmentEventNotification, :existing_plan => plan, :all_member_ids => member_ids) }
-  let(:event_2) { instance_double(ExternalEvents::EnrollmentEventNotification, :existing_plan => plan, :all_member_ids => member_ids) }
+  let(:event_2) { instance_double(ExternalEvents::EnrollmentEventNotification, :existing_plan => plan, :all_member_ids => member_ids, :is_cobra? => false) }
   let(:event_set) { [event_1, event_2] }
 
   subject { EnrollmentAction::MarketChange }
@@ -19,6 +19,20 @@ describe EnrollmentAction::MarketChange, "Market Change" do
 
   it "qualifies" do
     expect(subject.qualifies?(event_set)).to be_truthy
+  end
+
+  context "when market type is shop & cobra" do
+    let(:event_1) { instance_double(ExternalEvents::EnrollmentEventNotification, :existing_plan => plan, :all_member_ids => member_ids) }
+    let(:event_2) { instance_double(ExternalEvents::EnrollmentEventNotification, :existing_plan => plan, :all_member_ids => member_ids, :is_cobra? => true) }
+    let(:event_set) { [event_1, event_2] }
+    before do
+      allow(event_1).to receive_message_chain("enrollment_event_xml.event.body.enrollment.market").and_return "urn:openhbx:terms:v1:aca_marketplace#shop"
+      allow(event_2).to receive_message_chain("enrollment_event_xml.event.body.enrollment.market").and_return "urn:openhbx:terms:v1:aca_marketplace#cobra"
+    end
+
+    it "qualifies" do
+      expect(subject.qualifies?(event_set)).to be_falsy
+    end
   end
 end
 
