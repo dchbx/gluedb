@@ -5,7 +5,7 @@ describe Parsers::Cv::NewPolicy do
   before :all do
     NAMESPACES = { ns1: 'http://openhbx.org/api/terms/1.0'}
 
-    @xml_path = File.join(Rails.root, 'spec', 'data', 'lib', 'enrollment.xml')
+    @xml_path = File.join(Rails.root, 'spec', 'data', 'lib', 'example_enrollment.xml')
     @xml = File.open(@xml_path)
     @xml_doc = Nokogiri::XML(@xml)
     @xml_doc = @xml_doc.xpath('//ns1:policy', NAMESPACES).first

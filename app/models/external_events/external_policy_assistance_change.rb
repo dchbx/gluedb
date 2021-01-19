@@ -40,7 +40,9 @@ module ExternalEvents
       pre_amt_tot = extract_pre_amt_tot
       aptc_amt = extract_aptc_value
       policy.set_aptc_effective_on(new_aptc_date, aptc_amt, pre_amt_tot, tot_res_amt)
-      policy.save!
+      result = policy.save!
+      Observers::PolicyUpdated.notify(policy)
+      result
     end
   end
 end

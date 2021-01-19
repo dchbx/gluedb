@@ -72,6 +72,8 @@
         - if !employer.dba.blank?
           %dba= employer.dba
         %fein= employer.fein
+        = render :partial => "enrollment_events/employer_with_contacts", :object => employer
+        = render :partial => "enrollment_events/employer_with_office_locations", :object => employer
       %total_employer_responsible_amount=(policy.tot_emp_res_amt).round(2)
       - if policy.is_cobra?
         - if policy.cobra_eligibility_date.present?

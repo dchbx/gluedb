@@ -160,19 +160,21 @@ describe EnrollmentAction::ActiveRenewal, "#persist" do
     :is_cobra? => false
     )
   }
+
   let(:policy_updater) { instance_double(ExternalEvents::ExternalPolicy) }
   subject { EnrollmentAction::ActiveRenewal.new(nil,action) }
 
   before :each do
     allow(ExternalEvents::ExternalMember).to receive(:new).with(member).and_return(db_record)
-    allow(ExternalEvents::ExternalPolicy).to receive(:new).with(policy_cv, plan, false).and_return(policy_updater)
+    allow(ExternalEvents::ExternalPolicy).to receive(:new).with(policy_cv, plan, false, market_from_payload: subject.action).and_return(policy_updater)
+    allow(subject.action).to receive(:kind).and_return(action)
     allow(policy_updater).to receive(:persist).and_return(true)
   end
 
   context "successfuly persisted" do
     let(:db_record) { instance_double(ExternalEvents::ExternalMember, :persist => true) }
 
-    before(:each) do 
+    before(:each) do
       allow(subject.action).to receive(:existing_policy).and_return(false)
     end
 
@@ -183,7 +185,7 @@ describe EnrollmentAction::ActiveRenewal, "#persist" do
   context "failed to persist" do
     let(:db_record) { instance_double(ExternalEvents::ExternalMember, :persist => false) }
 
-    before(:each) do 
+    before(:each) do
       allow(subject.action).to receive(:existing_policy).and_return(true)
     end
 
@@ -224,6 +226,7 @@ describe EnrollmentAction::ActiveRenewal, "#publish" do
       and_return(true)
     allow(action_helper).to receive(:keep_member_ends).with([]).and_return(true)
     allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, 1, 1)
+    allow(action).to receive(:renewal_cancel_policy).and_return([])
   end
 
   it "publishes an event of type active renew" do
@@ -241,5 +244,25 @@ describe EnrollmentAction::ActiveRenewal, "#publish" do
       to receive(:publish_edi).
       with(amqp_connection, action_helper_result_xml, 1, 1)
     subject.publish
+  end
+
+  context "carrier with canceled_renewal_causes_new_coverage" do
+    let(:carrier) { instance_double(Carrier, :canceled_renewal_causes_new_coverage => true) }
+    let(:policy) { instance_double(Policy, :carrier => carrier) }
+
+    before do
+      allow(EnrollmentAction::ActionPublishHelper).
+          to receive(:new).
+                 with(event_xml).and_return(action_helper)
+      allow(action_helper).to receive(:keep_member_ends).with([]).and_return(true)
+      allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, 1, 1)
+      allow(action).to receive(:renewal_cancel_policy).and_return(true)
+      allow(action).to receive(:existing_policy).and_return(policy)
+    end
+
+    it "publishes an event of type initial" do
+      expect(action_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#initial")
+      subject.publish
+    end
   end
 end

@@ -6,6 +6,7 @@ module ExternalEvents
     attr_reader :total_source
 
     include Handlers::EnrollmentEventXmlHelper
+    include ::EnrollmentAction::NotificationExemptionHelper
 
     # p_node : Openhbx::Cv2::Policy
     def initialize(pol_to_change, p_node, d_member_ids)
@@ -166,11 +167,32 @@ module ExternalEvents
         :pre_amt_tot => extract_pre_amt_tot,
         :tot_res_amt => extract_tot_res_amt
       }.merge(extract_other_financials))
-      pol = Policy.find(pol._id)
+      policy_id = pol._id
+      pol = Policy.find(policy_id)
       @policy_node.enrollees.each do |en|
         term_enrollee(pol, en)
       end
+      unless all_terminations_exempt?(pol, @policy_node)
+        Observers::PolicyUpdated.notify(pol)
+      end
       true
+    end
+
+    def all_terminations_exempt?(pol, policy_node)
+      return false if pol.is_shop?
+      enrollees_to_check = policy_node.enrollees.select do |en|
+        member_id = extract_member_id(en)
+        @dropped_member_ids.include?(member_id)
+      end
+      enrollees_to_check.all? do |en|
+        member_exempt_from_termination_notification?(pol, en)
+      end
+    end
+
+    def member_exempt_from_termination_notification?(pol, enrollee_node)
+      end_date = extract_enrollee_end(enrollee_node)
+      return false if end_date.blank?
+      termination_event_exempt_from_notification?(pol, end_date, false)
     end
   end
 end

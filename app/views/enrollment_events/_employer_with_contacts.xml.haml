@@ -1,0 +1,53 @@
+- if !employer_with_contacts.employer_contacts.blank?
+  %contacts{:xmlns => "http://openhbx.org/api/terms/1.0"}
+    - employer_with_contacts.employer_contacts.each do |contact|
+      %contact
+        %id
+          %id= contact.id
+        %person_name
+          - unless contact.last_name.blank?
+            %person_surname= contact.last_name
+          - unless contact.first_name.blank?
+            %person_given_name=  contact.first_name
+          - unless contact.middle_name.blank?
+            %person_middle_name= contact.middle_name
+          - unless contact.name_prefix.blank?
+            %person_name_prefix_text= contact.name_prefix
+          - unless contact.name_suffix.blank?
+            %person_name_suffix_text= contact.name_suffix
+        - unless contact.job_title.blank?
+          %job_title= contact.job_title
+        - unless contact.department.blank?
+          %department= contact.department
+        - if !contact.addresses.blank?
+          %addresses
+            - contact.addresses.each do |address|
+              %address
+                %type= "urn:openhbx:terms:v1:address_type#" + address.address_type
+                %address_line_1= address.address_1
+                - unless address.address_2.blank?
+                  %address_line_2= address.address_2
+                - unless address.address_3.blank?
+                  %address_line_3= address.address_3
+                - unless address.city.blank?
+                  %location_city_name= address.city
+                - unless address.county.blank?
+                  %location_county_name= address.county
+                - unless address.state.blank?
+                  %location_state_code= address.state
+                - unless address.zip.blank?
+                  %postal_code= address.zip
+        - if !contact.emails.blank?
+          %emails
+            - contact.emails.each do |email|
+              %email
+                %type= "urn:openhbx:terms:v1:email_type#" + email.email_type
+                %email_address= email.email_address
+        - if !contact.phones.blank?
+          %phones
+            - contact.phones.each do |phone|
+              %phone
+                %type= "urn:openhbx:terms:v1:phone_type#" + phone.phone_type
+                - unless phone.phone_number.blank?
+                  %full_phone_number= phone.phone_number
+                %is_preferred= phone.primary ? "true" : "false"

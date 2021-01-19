@@ -54,6 +54,14 @@ class Employer
   index({"elected_plans.qhp_id" => 1})
   accepts_nested_attributes_for :elected_plans, reject_if: :all_blank, allow_destroy: true
 
+
+  embeds_many :employer_contacts, :inverse_of => :employer
+  accepts_nested_attributes_for :employer_contacts, reject_if: :all_blank, allow_destroy: true
+
+
+  embeds_many :employer_office_locations, :inverse_of => :employer
+  accepts_nested_attributes_for :employer_office_locations, reject_if: :all_blank, allow_destroy: true
+
   embeds_many :addresses, :inverse_of => :employer
   accepts_nested_attributes_for :addresses, reject_if: :all_blank, allow_destroy: true
 

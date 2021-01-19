@@ -13,6 +13,18 @@ class Carrier
   field :shp_hlt, as: :shop_market_health, type: Boolean, default: false
   field :shp_dtl, as: :shop_market_dental, type: Boolean, default: false
   field :is_active, type: Boolean, default: true
+  field :requires_employer_updates_on_enrollments, type: Boolean, default: false
+  field :uses_issuer_centric_sponsor_cycles, type: Boolean, default: false
+  field :requires_simple_plan_changes, type: Boolean, default: false
+  field :requires_simple_renewal, type: Boolean, default: false
+  field :requires_reinstate_for_earlier_termination, type: Boolean, default: false
+  field :canceled_renewal_causes_new_coverage, type: Boolean, default: false
+  field :termination_cancels_renewal, type: Boolean, default: false
+  field :renewal_dependent_add_transmitted_as_renewal, type: Boolean, default: false
+  field :plan_change_renewal_dependent_add_transmitted_as_renewal, type: Boolean, default: false
+  field :plan_change_renewal_dependent_drop_transmitted_as_renewal, type: Boolean, default: false
+  field :retro_renewal_transmitted_as_renewal, type: Boolean, default: false
+  field :renewal_dependent_drop_transmitted_as_renewal, type: Boolean, default: false
 
   has_many :plans
   has_many :policies
@@ -68,5 +80,9 @@ class Carrier
     Rails.cache.fetch("Carrier/find/carrier_profiles.fein.#{c_fein}") do
       Carrier.where("carrier_profiles.fein" => c_fein).first
     end
+  end
+
+  def shop_profile
+    carrier_profiles.where(profile_name: /.*SHP/).first
   end
 end

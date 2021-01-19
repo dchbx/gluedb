@@ -8,6 +8,79 @@ describe "enrollment_events/_policy.xml" do
     download_vocabularies
   end
 
+  let(:address) do 
+    instance_double Address,
+      address_type:"urn:openhbx:terms:v1:address_type#mailing",
+      state:"CA",
+      address_1:"14400 Harvard",
+      address_2:"Apt 3",
+      address_3: "Ste. 200",
+      city:"Winters",
+      county:"Yolo",
+      zip:"95694"
+  end
+
+  let(:addresses) do 
+    [address]
+  end
+
+  let(:phone) do 
+    instance_double Phone,
+      phone_type:"urn:openhbx:terms:v1:phone_type#mobile",
+      phone_number:"5102222222",
+      extension:"123",
+      primary: true,
+      country_code:"1",
+      area_code:"123",
+      full_phone_number:"123-456-5678"
+  end
+
+  let(:phones) do 
+    [phone]
+  end
+
+  let(:emails) do 
+    [email]
+  end
+
+  let(:email) do 
+    instance_double Email,
+     email_type:"urn:openhbx:terms:v1:email_type#home",
+     email_address:"tim@tim.com"
+  end
+
+  let (:employer_contact) do 
+    instance_double EmployerContact,
+      name_prefix:"Mr.",
+      first_name:"Joe",
+      middle_name:"louis",
+      last_name:"smith",
+      name_suffix:"Sr.",
+      job_title:"Director",
+      department:"HR",
+      emails: emails,
+      phones: phones,
+      addresses: addresses
+  end
+
+  let(:employer_office_location) do
+      instance_double EmployerOfficeLocation,
+        name:"Primary",
+        is_primary:true,
+        address: address,
+        phone: phone
+  end
+
+  let(:employer) do
+    instance_double Employer,
+      hbx_id: '1',
+      name:"Jim",
+      dba: "dba",
+      fein: "12345",
+      employer_contacts: [employer_contact],
+      employer_office_locations: [employer_office_location]
+  end
+
   let(:broker) do
     instance_double Broker,
       npn: 'npn',
@@ -34,6 +107,30 @@ describe "enrollment_events/_policy.xml" do
       id: 'a12db3',
       carrier_id: carrier.id
   end
+
+
+  let(:shop_policy) do
+    instance_double Policy,
+      eg_id: 'the-eg-id',
+      broker: broker,
+      subscriber: subscriber,
+      is_cobra?: false,
+      composite_rating_tier: "23",
+      has_responsible_person?: false,
+      plan: plan,
+      carrier_specific_plan_id: 'carrier_specific_plan_id',
+      is_shop?: true,
+      employer: employer,
+      applied_aptc: BigDecimal.new("0.0"),
+      assistance_effective_date: Date.today + 1.day,
+      pre_amt_tot: BigDecimal.new("899.99"),
+      tot_res_amt: BigDecimal.new("899.99"),
+      tot_emp_res_amt:BigDecimal.new("899.99"),
+      rating_area: 'rating_area',
+      created_at: Time.now - 1.week,
+      updated_at: nil
+end
+
 
   let(:subscriber_person) do
     instance_double Person,
@@ -116,6 +213,19 @@ describe "enrollment_events/_policy.xml" do
       :layout => 'layouts/policy_test',
       :locals => { :policy => policy, :enrollees => [ subscriber, life_partner ] }
   end
+
+  subject { rendered }
+
+  it "should be schema valid" do
+    expect(validate_with_schema(Nokogiri::XML(subject))).to eq([])
+  end
+
+  before do
+    allow(shop_policy).to receive(:plan_id).and_return(plan.id)
+    allow(employer_contact).to receive(:id).and_return("1")
+    render :template => "enrollment_events/_policy",
+      :layout => 'layouts/policy_test',
+      :locals => { :address => address, :policy => shop_policy, :enrollees => [ subscriber, life_partner ] }  end
 
   subject { rendered }
 

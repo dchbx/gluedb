@@ -1,4 +1,6 @@
 class EndCoverage
+  include EnrollmentAction::NotificationExemptionHelper
+
   def initialize(action_factory, policy_repo = Policy)
     @policy_repo = policy_repo
     @action_factory = action_factory
@@ -14,6 +16,7 @@ class EndCoverage
     enrollees_not_already_canceled = @policy.enrollees.select { |e| !e.canceled? }
 
     update_policy(affected_enrollee_ids)
+    notify_if_qualifies(request, @policy)
 
     action = @action_factory.create_for(request)
     action_request = {
@@ -24,7 +27,8 @@ class EndCoverage
       include_enrollee_ids: enrollees_not_already_canceled.map(&:m_id),
       current_user: request[:current_user]
     }
-    action.execute(action_request)
+    result = action.execute(action_request)
+    result
   end
 
   def execute_csv(request, listener)
@@ -172,6 +176,26 @@ class EndCoverage
       enrollee.coverage_end = enrollee.coverage_start
     else
       enrollee.coverage_end = date
+    end
+  end
+
+  def notify_if_qualifies(request, policy)
+    if(request[:operation] == 'cancel')
+      Observers::PolicyUpdated.notify(policy)
+    else
+      coverage_end_date = parse_coverage_end(request[:coverage_end])
+      unless termination_event_exempt_from_notification?(policy, coverage_end_date)
+        Observers::PolicyUpdated.notify(policy)
+      end
+    end
+  end
+
+  def parse_coverage_end(requested_coverage_end)
+    return requested_coverage_end if requested_coverage_end.kind_of?(Date)
+    if requested_coverage_end.split('/').first.size == 2
+      Date.strptime(requested_coverage_end,"%m/%d/%Y")
+    elsif requested_coverage_end.split('-').first.size == 2
+      Date.strptime(requested_coverage_end,"%m-%d-%Y")
     end
   end
 

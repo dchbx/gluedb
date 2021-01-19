@@ -17,10 +17,13 @@ module EmployerEvents
 
     def has_current_or_future_plan_year?(carrier)
       found_plan_year = false
+      found_start_date = nil
+      found_end_date = nil
       carrier_plan_years(carrier).each do |node|
         node.xpath("cv:plan_year_start", {:cv => XML_NS}).each do |date_node|
           date_value = Date.strptime(date_node.content, "%Y%m%d") rescue nil
           if date_value
+            found_start_date = date_value
             if date_value >= Date.today
               found_plan_year = true
             end
@@ -29,13 +32,39 @@ module EmployerEvents
         node.xpath("cv:plan_year_end", {:cv => XML_NS}).each do |date_node|
           date_value = Date.strptime(date_node.content, "%Y%m%d") rescue nil
           if date_value
+            found_end_date = date_value
             if date_value >= Date.today
               found_plan_year = true
             end
           end
         end
       end
+      return false if found_start_date && found_end_date && (found_start_date == found_end_date)
       found_plan_year
+    end
+
+    def should_send_retroactive_term_or_cancel?(carrier)
+      events = EmployerEvents::EventNames::TERMINATION_EVENT + [EmployerEvents::EventNames::RENEWAL_CARRIER_CHANGE_EVENT]
+      return false unless events.include?(employer_event.event_name)
+      doc = Nokogiri::XML(employer_event.resource_body)
+      all_plan_years = doc.xpath("//cv:plan_year", {:cv => XML_NS})
+      return false if all_plan_years.empty?
+      sorted_plan_years = all_plan_years.sort_by do |node|
+        Date.strptime(node.xpath("cv:plan_year_start", {:cv => XML_NS}).first.content,"%Y%m%d") rescue nil
+      end
+      last_plan_year = sorted_plan_years.last
+      if last_plan_year.present? && last_plan_year.xpath(".//cv:elected_plans/cv:elected_plan/cv:carrier/cv:id/cv:id[text() = '#{carrier.hbx_carrier_id}']", {:cv => XML_NS}).any?
+        start_date = Date.strptime(last_plan_year.xpath("cv:plan_year_start", {:cv => XML_NS}).first.content,"%Y%m%d") rescue nil
+        end_date = Date.strptime(last_plan_year.xpath("cv:plan_year_end", {:cv => XML_NS}).first.content,"%Y%m%d") rescue nil
+        return false if start_date.blank? || end_date.blank?
+        if employer_event.event_name == EmployerEvents::EventNames::RENEWAL_CARRIER_CHANGE_EVENT
+          start_date == end_date
+        else
+          start_date != end_date && end_date > Date.today - 1.year
+        end
+      else
+        false
+      end
     end
 
     def renewal_and_no_future_plan_year?(carrier)
@@ -58,10 +87,11 @@ module EmployerEvents
       return false if employer_event.event_name != EmployerEvents::EventNames::RENEWAL_CARRIER_CHANGE_EVENT
       found_future_plan_year = false
       carrier_plan_years(carrier).each do |node|
+        end_date = Date.strptime(node.xpath("cv:plan_year_end", {:cv => XML_NS}).first.content,"%Y%m%d") rescue nil
         node.xpath("cv:plan_year_start", {:cv => XML_NS}).each do |date_node|
           date_value = Date.strptime(date_node.content, "%Y%m%d") rescue nil
           if date_value
-            if date_value > Date.today
+            if date_value > Date.today && date_value != end_date
               found_future_plan_year = true
             end
           end
@@ -82,7 +112,7 @@ module EmployerEvents
         return false
       end
 
-      return false unless has_current_or_future_plan_year?(carrier)
+      return false unless has_current_or_future_plan_year?(carrier) || should_send_retroactive_term_or_cancel?(carrier)
       return false if drop_and_has_future_plan_year?(carrier)
       return false if renewal_and_no_future_plan_year?(carrier)
 

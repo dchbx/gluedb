@@ -28,7 +28,7 @@ class ApplicationController < ActionController::Base
   end
 
   def access_denied
-    render file: 'public/403', status: 403, formats: [:html]
+    render nothing: true, status: 403
   end
 
   def redirect_back_with_message(exception)

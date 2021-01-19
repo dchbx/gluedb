@@ -97,10 +97,7 @@ module Handlers
     protected
 
     def new_transaction_id
-      ran = Random.new
-      current_time = Time.now.utc
-      reference_number_base = current_time.strftime("%Y%m%d%H%M%S") + current_time.usec.to_s[0..2]
-      reference_number_base + sprintf("%05i", ran.rand(65535))
+      TransactionIdGenerator.generate_bgn02_compatible_transaction_id
     end
 
     def update_transaction_id(action_xml, change_bgn = false)

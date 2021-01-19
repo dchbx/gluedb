@@ -4,7 +4,7 @@ describe EnrollmentAction::CobraNewPolicyReinstate, "given:
 - 2 events
 " do
 
-  let(:event_1) { instance_double(ExternalEvents::EnrollmentEventNotification) } 
+  let(:event_1) { instance_double(ExternalEvents::EnrollmentEventNotification) }
   let(:event_2) { instance_double(ExternalEvents::EnrollmentEventNotification) }
 
   subject { EnrollmentAction::CobraNewPolicyReinstate }
@@ -88,8 +88,9 @@ describe EnrollmentAction::CobraNewPolicyReinstate, "with an cobra reinstate enr
 
   before :each do
     allow(ExternalEvents::ExternalMember).to receive(:new).with(member_from_xml).and_return(member_database_record)
-    allow(ExternalEvents::ExternalPolicy).to receive(:new).with(policy_cv, existing_plan,cobra_reinstate).and_return(policy_database_record)
+    allow(ExternalEvents::ExternalPolicy).to receive(:new).with(policy_cv, existing_plan,cobra_reinstate, market_from_payload: subject.action).and_return(policy_database_record)
     allow(subject.action).to receive(:existing_policy).and_return(false)
+    allow(subject.action).to receive(:kind).and_return(enrollment_event)
   end
 
   it "successfully creates the new policy" do

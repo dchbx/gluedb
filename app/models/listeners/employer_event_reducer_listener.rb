@@ -33,9 +33,9 @@ module Listeners
       channel.ack(delivery_info.delivery_tag, false)
     end
 
-    def request_resource(employer_id)
+    def request_resource(employer_id, plan_year_id = nil)
       begin
-        di, rprops, resp_body = request({:headers => {:employer_id => employer_id}, :routing_key => "resource.employer"},"", 30)
+        di, rprops, resp_body = request({:headers => {:employer_id => employer_id, :plan_year_id => plan_year_id}, :routing_key => "resource.employer"},"", 30)
         r_headers = (rprops.headers || {}).to_hash.stringify_keys
         r_code = r_headers['return_status'].to_s
         if r_code == "200"
@@ -51,6 +51,7 @@ module Listeners
     def on_message(delivery_info, properties, body)
       m_headers = (properties.headers || {}).to_hash.stringify_keys
       employer_id = m_headers["employer_id"].to_s
+      plan_year_id = m_headers["plan_year_id"].to_s
       event_name = delivery_info.routing_key.split("employer.").last
       if !event_name.blank?
         if (event_name =~ /nfp\./) || (event_name =~ /nfp_/)
@@ -60,7 +61,7 @@ module Listeners
       end
       event_time = get_timestamp(properties)
       if EmployerEvent.newest_event?(employer_id, event_name, event_time)
-        r_code, resource_or_body = request_resource(employer_id)
+        r_code, resource_or_body = request_resource(employer_id, plan_year_id)
         case r_code.to_s
         when "200"
           process_retrieved_resource(delivery_info, employer_id, resource_or_body, m_headers, event_name, event_time)

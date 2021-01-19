@@ -13,6 +13,8 @@ Gluedb::Application.routes.draw do
 
   resources :users
 
+  resources :legacy_cv_transactions, only: %i[show index]
+
   resources :enrollment_action_issues, only: [:index, :show] do
   end
 

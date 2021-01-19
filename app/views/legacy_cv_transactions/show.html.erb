@@ -1,0 +1,50 @@
+<% model_class = Protocols::LegacyCv::LegacyCvTransaction %>
+<%t '.title', :default => model_class.model_name.human.titleize %>
+<div class="page-header">
+  <%= render 'shared/breadcrumb', crumbs: [@legacy_cv_transaction.id] %>
+</div>
+
+ <div class="row">
+  <div class="col-md-12">
+    <dl class="dl-horizontal">
+      <dt>EG ID:</dt>
+      <dd><%= @legacy_cv_transaction.eg_id %></dd>
+      <dt>Transaction Kind:</dt>
+      <dd><%= @legacy_cv_transaction.transaction_kind.to_s %></dd>
+      <dt>Submitted At:</dt>
+      <dd><%= @legacy_cv_transaction.submitted_at.to_s %></dd>
+      <dt>File Location:</dt>
+      <dd><%= @legacy_cv_transaction.location %></dd>
+      <dt>Reason:</dt>
+      <dd><%= @legacy_cv_transaction.reason %></dd>
+      <dt>Action:</dt>
+      <dd><%= @legacy_cv_transaction.action %></dd>
+    </dl>
+  </div>
+</div>
+
+<div class='row'>
+   <div class="col-md-12">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title">
+        <span class="fui-document">&nbsp;</span>
+          Payment Processor Payload
+        </h3>
+      </div>
+      <div class="panel-body">
+        <pre><small><%= @legacy_cv_transaction.body.read %></small></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+ <div class="row">
+  <div class="col-md-12">
+    <div class="well well-sm default">
+      <div class="form-actions">
+        <%= link_to t('.back', :default => t("helpers.links.back")),
+              person_path(@person), :class => 'btn btn-primary'  %>  
+      </div>
+  </div>
+</div>

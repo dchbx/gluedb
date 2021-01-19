@@ -1,6 +1,12 @@
 require 'rails_helper'
 
 feature 'uploading show CV', :dbclean => :after_each do
+  let(:mock_event_broadcaster) do
+    instance_double(Amqp::EventBroadcaster)
+  end
+
+  let(:user) { create :user, :admin }
+
   given(:premium) do
     PremiumTable.new(
       rate_start_date: Date.new(2014, 1, 1),
@@ -9,7 +15,6 @@ feature 'uploading show CV', :dbclean => :after_each do
       amount: 742.47)
   end
   background do
-    user = create :user, :admin
     visit root_path
     sign_in_with(user.email, user.password)
 
@@ -32,11 +37,27 @@ feature 'uploading show CV', :dbclean => :after_each do
   end
 
   scenario 'a successful upload' do
+    file_path = Rails.root + "spec/support/fixtures/shop_enrollment/correct.xml"
+    allow(Amqp::EventBroadcaster).to receive(:with_broadcaster).and_yield(mock_event_broadcaster)
+    allow(mock_event_broadcaster).to receive(:broadcast).with(
+      {
+        :routing_key => "info.events.legacy_enrollment_vocabulary.uploaded",
+        :app_id =>  "gluedb",
+        :headers =>  {
+          "file_name" => File.basename(file_path),
+          "kind" => 'initial_enrollment',
+          "submitted_by"  => user.email,
+          "bypass_validation" => "false",
+          "csl_number" => "1234"
+        }
+      },
+      File.read(file_path)
+    )
     visit new_vocab_upload_path
 
     choose 'Initial Enrollment'
+    fill_in "vocab_upload[csl_number]", with: "1234"
 
-    file_path = Rails.root + "spec/support/fixtures/shop_enrollment/correct.xml"
     attach_file('vocab_upload_vocab', file_path)
 
     click_button "Upload"
@@ -48,6 +69,7 @@ feature 'uploading show CV', :dbclean => :after_each do
     visit new_vocab_upload_path
 
     choose 'Initial Enrollment'
+    fill_in "vocab_upload[redmine_ticket]", with: "1234"
 
     file_path = Rails.root + "spec/support/fixtures/shop_enrollment/incorrect_premium.xml"
     attach_file('vocab_upload_vocab', file_path)
@@ -63,6 +85,7 @@ feature 'uploading show CV', :dbclean => :after_each do
     visit new_vocab_upload_path
 
     choose 'Initial Enrollment'
+    fill_in "vocab_upload[redmine_ticket]", with: "1234"
 
     file_path = Rails.root + "spec/support/fixtures/shop_enrollment/incorrect_total.xml"
     attach_file('vocab_upload_vocab', file_path)
@@ -77,6 +100,7 @@ feature 'uploading show CV', :dbclean => :after_each do
     visit new_vocab_upload_path
 
     choose 'Initial Enrollment'
+    fill_in "vocab_upload[redmine_ticket]", with: "1234"
 
     file_path = Rails.root + "spec/support/fixtures/shop_enrollment/incorrect_responsible.xml"
     attach_file('vocab_upload_vocab', file_path)
@@ -93,6 +117,7 @@ feature 'uploading show CV', :dbclean => :after_each do
       visit new_vocab_upload_path
 
       choose 'Initial Enrollment'
+      fill_in "vocab_upload[redmine_ticket]", with: "1234"
 
       file_path = Rails.root + "spec/support/fixtures/shop_enrollment/correct.xml"
       attach_file('vocab_upload_vocab', file_path)

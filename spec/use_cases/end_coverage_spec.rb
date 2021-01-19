@@ -56,10 +56,11 @@ describe EndCoverage, :dbclean => :after_each do
   let(:inactive_member_age) { 30 }
   let(:premium_table_for_inactive_member) { PremiumTable.new(rate_start_date: premium_start, rate_end_date: premium_end, age: inactive_member_age, amount: inactive_member_rate_amount) }
 
-  before {
+  before do
     allow(subscriber).to receive(:member) { subscriber_member }
     allow(member).to receive(:member) { member_member }
-  }
+    allow(Observers::PolicyUpdated).to receive(:notify).with(policy)
+  end
 
 
   shared_examples_for "coverage ended with correct responsible amount" do
@@ -93,6 +94,11 @@ describe EndCoverage, :dbclean => :after_each do
   end
 
   context 'from button on UI' do
+    it "notifies of the coverage end" do
+      expect(Observers::PolicyUpdated).to receive(:notify).with(policy)
+      end_coverage.execute(request)
+    end
+
     it 'finds the policy' do
       expect(policy_repo).to receive(:find).with(policy.id)
       end_coverage.execute(request)
@@ -124,6 +130,15 @@ describe EndCoverage, :dbclean => :after_each do
       let(:affected_enrollee_ids) { [] }
       it "doesn't execute the resulting action" do
         expect(action).not_to receive(:execute)
+        end_coverage.execute(request)
+      end
+    end
+
+    context "on an IVL policy terminated 12/31" do
+      let(:coverage_end) { Date.new(coverage_start.year, 12, 31) }
+
+      it "doesn't notify" do
+        expect(Observers::PolicyUpdated).not_to receive(:notify).with(policy)
         end_coverage.execute(request)
       end
     end

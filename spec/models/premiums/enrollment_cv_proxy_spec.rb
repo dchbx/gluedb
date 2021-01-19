@@ -4,7 +4,7 @@ describe EnrollmentCvProxy do
 
   before(:all) do
 
-    @xml_path = File.join(Rails.root, 'spec', 'data', 'lib', 'enrollment.xml')
+    @xml_path = File.join(Rails.root, 'spec', 'data', 'lib', 'example_enrollment.xml')
     @xml = File.open(@xml_path)
     @enrollment_cv_proxy = EnrollmentCvProxy.new(@xml)
   end

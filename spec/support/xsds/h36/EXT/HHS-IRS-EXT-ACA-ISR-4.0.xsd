@@ -1,0 +1,518 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:irs="urn:us:gov:treasury:irs:common" xmlns="urn:us:gov:treasury:irs:ext:aca:hhsisr:4.0" targetNamespace="urn:us:gov:treasury:irs:ext:aca:hhsisr:4.0" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xsd:annotation>
+		<xsd:documentation>
+			<Component>
+				<DictionaryEntryNm>ACA HHS ISR 4.0</DictionaryEntryNm>
+				<MajorVersionNum>2</MajorVersionNum>
+				<MinorVersionNum>1</MinorVersionNum>
+				<VersionDescriptionTxt>Update element reference to IRS COMMON 8.18</VersionDescriptionTxt>
+				<VersionEffectiveBeginDt>12-31-2015</VersionEffectiveBeginDt>
+				<DescriptionTxt>This XML vocabulary is for ACA release 4.0 development purposes.</DescriptionTxt>
+			</Component>
+		</xsd:documentation>
+	</xsd:annotation>
+	<!-- ===== Imports / Include ===== -->
+	<xsd:import namespace="urn:us:gov:treasury:irs:common" schemaLocation="../COMMON/IRS-CAC.xsd"/>
+	<!-- ======== Local CAC Defintions ================-->
+	<xsd:element name="ACAAttachmentDetail" type="ACAAttachmentDetailType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Affordable Care Act (ACA) Attachment Detail Group</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial version</VersionDescriptionTxt>
+					<DescriptionTxt>Global type for the ACA Attachment Detail</DescriptionTxt>
+					<CACInd>Y</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<xsd:element name="ACABatchDetail" type="ACABatchDetailType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Affordable Care Act (ACA) Batch Detail Group</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt/>
+					<DescriptionTxt>Initial version</DescriptionTxt>
+					<CACInd>Y</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<xsd:element name="ACABatchManifestDetail" type="ACABatchManifestDetailType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Affordable Care Act (ACA) Batch Manifest Detail Group</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial version</VersionDescriptionTxt>
+					<DescriptionTxt>Global type for the ACA Batch Manifest Detail</DescriptionTxt>
+					<CACInd>Y</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<xsd:element name="ACABatchManifestResponseDetail" type="ACABatchManifestResponseDetailType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Affordable Care Act (ACA) Batch Manifest Response Detail Group</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial version</VersionDescriptionTxt>
+					<DescriptionTxt>Global type for the ACA Batch Manifest Response Detail</DescriptionTxt>
+					<CACInd>Y</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<xsd:element name="ACABatchTransmissionDetail" type="ACABatchTransmissionDetailType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Affordable Care Act (ACA) Batch Transmission Detail</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial version</VersionDescriptionTxt>
+					<DescriptionTxt>Global type for the ACA Batch Transmission Detail</DescriptionTxt>
+				    <CACInd>Y</CACInd>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<!-- ======== Local CAC Type Defintions ===========-->
+	<xsd:complexType name="ACAAttachmentDetailType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Affordable Care Act (ACA) Attachment Detail Group</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial version</VersionDescriptionTxt>
+					<DescriptionTxt>Global type for the ACA Attachment Detail</DescriptionTxt>
+					<CACInd>Y</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element ref="irs:BinaryFormatCd"/>
+			<xsd:element ref="irs:ChecksumAugmentationNum"/>
+			<xsd:element ref="AttachmentByteSizeNum"/>
+			<xsd:element ref="DocumentSystemFileNm"/>
+			<xsd:element ref="irs:SystemDocumentId" minOccurs="0"/>
+			<xsd:element ref="DocumentSequenceNum"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="ACABatchDetailType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Affordable Care Act (ACA) Batch Detail Group</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial version</VersionDescriptionTxt>
+					<DescriptionTxt>Global type for the ACA Batch Detail Type</DescriptionTxt>
+					<CACInd>Y</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element ref="irs:BatchId"/>
+			<xsd:element ref="BatchPartnerId"/>
+			<xsd:element ref="BatchAttachmentTransmissionQty"/>
+			<xsd:element ref="BatchCategoryCd"/>
+			<xsd:element ref="BatchTransmissionQty"/>
+			<xsd:element ref="irs:OriginalBatchId" minOccurs="0"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="ACABatchManifestDetailType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Affordable Care Act (ACA) Batch Manifest Detail Group</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>2013-01-01</VersionDescriptionTxt>
+					<DescriptionTxt>Global type for the ACA Batch Manifest Detail Type</DescriptionTxt>
+					<CACInd>Y</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element ref="ACABatchDetail"/>
+			<xsd:element ref="ACABatchTransmissionDetail"/>
+			<xsd:element ref="irs:ACAReportingServiceDetail"/>
+			<xsd:element ref="ACAAttachmentDetail" minOccurs="0"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="ACABatchManifestResponseDetailType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Affordable Care Act (ACA) Batch Manifest Response Group</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial version</VersionDescriptionTxt>
+					<DescriptionTxt>Global type for the ACA Batch Manifest Response Detail Type</DescriptionTxt>
+					<CACInd>Y</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element ref="irs:ResponseCd"/>
+			<xsd:element ref="irs:ResponseCodeDescription"/>
+			<xsd:element ref="irs:SystemDocumentId" minOccurs="0"/>
+			<xsd:element ref="DocumentSequenceNum"/>
+			<xsd:element ref="irs:ErrorMessageDetail"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="ACABatchTransmissionDetailType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Affordable Care Act (ACA) Batch Transmission Detail Group</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial version</VersionDescriptionTxt>
+					<DescriptionTxt>Global type for the ACA Batch Transmission Detail Type</DescriptionTxt>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element ref="TransmissionAttachmentQty"/>
+			<xsd:element ref="SequenceNum"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<!-- ======== Local CBC Element Declarations ======-->
+	<xsd:element name="AttachmentByteSizeNum" type="xsd:nonNegativeInteger">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Attachment Byte Size Number</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial version</VersionDescriptionTxt>
+					<DescriptionTxt>A size of a binary object (attachment) in bytes.</DescriptionTxt>
+					<DataElementId>166001</DataElementId>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<xsd:element name="BatchAttachmentTransmissionQty" type="xsd:nonNegativeInteger">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Batch Attachment Transmission Quantity</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial version</VersionDescriptionTxt>
+					<DescriptionTxt>A count of total number of attachments in a batch submission (across all transmissions).</DescriptionTxt>
+					<DataElementId>166002</DataElementId>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<xsd:element name="BatchCategoryCd" type="BatchCategoryCodeType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Batch Category Code</DictionaryEntryNm>
+					<MajorVersionNum>2</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2015-05-28</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Added new emuneration values needed for TPE rejections</VersionDescriptionTxt>
+					<DescriptionTxt>The kind of batch submission, a cummulative list of predetermined values identifying each possible kind of batch processing.</DescriptionTxt>
+					<CACInd>N</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<xsd:element name="BatchPartnerId" type="ExchangeIdType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Batch Partner Identifier</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial version</VersionDescriptionTxt>
+					<DescriptionTxt>An identifier for a participant in the Health Insurance Exchange Ecosystem. Expected to be duplication of Partner ID provided inside attached file to identify which Partner has submitted a report/request.</DescriptionTxt>
+					<CACInd>N</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<xsd:element name="BatchTransmissionQty" type="xsd:nonNegativeInteger">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Batch Transmission Quantity</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial version</VersionDescriptionTxt>
+					<DescriptionTxt>A count of the number of transmissions in a batch submission. The total number of submissions required to complete the report submittal due to files being split to meet max file size.</DescriptionTxt>
+					<CACInd>N</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<xsd:element name="DocumentSequenceNum" type="DocumentSequenceNumType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Document Sequence Number</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-10-30</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Developed a generic sequence number for document</VersionDescriptionTxt>
+					<DescriptionTxt>A system generated sequential number used to complete the identification of the submitted document</DescriptionTxt>
+					<CACInd>N</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<xsd:element name="DocumentSystemFileNm" type="DocumentSystemFileNameType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Document System File Name</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2008-09-02</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>AMS R 2.1</VersionDescriptionTxt>
+					<DescriptionTxt>The filename of a document in a file system.</DescriptionTxt>
+					<CACInd>N</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<xsd:element name="SequenceNum" type="xsd:nonNegativeInteger">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Sequence Number</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2007-11-19</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Developed a generic sequence number for tax account module freeze, hold and status codes</VersionDescriptionTxt>
+					<DescriptionTxt>A system generated sequential number used to complete the identification of this dependent data class</DescriptionTxt>
+					<CACInd>N</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<xsd:element name="TransmissionAttachmentQty" type="xsd:nonNegativeInteger">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Batch Transmission Attachment Quantity</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-01-01</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial version</VersionDescriptionTxt>
+					<DescriptionTxt>A count of the number of attachments included in a single transmission message.</DescriptionTxt>
+					<CACInd>N</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+	</xsd:element>
+	<!-- ======== Local SDT Element Declarations ======-->
+	<xsd:simpleType name="BatchCategoryCodeType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Batch Category Code Type</DictionaryEntryNm>
+					<MajorVersionNum>2</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2015-05-28</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Added new emuneration values needed for TPE rejections (UWR 160759)</VersionDescriptionTxt>
+					<DescriptionTxt>This is a cummulative list of predetermined values identifying each possible kind of batch processing </DescriptionTxt>
+					<CACInd>N</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="IRS_EOM_IND_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies End of Month Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOM_IND_RESUBMIT_FILE_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies End of Month File Resubmit Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOM_IND_RESUBMIT_BATCH_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies End of Month Batch Resubmit Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOM_IND_RESUBMIT_MISSING_FILE_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies End of Month Missing File Resubmit Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOM_SHOP_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies End of Month Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOM_SHOP_RESUBMIT_FILE_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies End of Month File Resubmit Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOM_SHOP_RESUBMIT_BATCH_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies End of Month Batch Resubmit Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOM_SHOP_RESUBMIT_MISSING_FILE_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies End of Month Missing File Resubmit Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOY_IND_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies End of year Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOY_IND_RESUBMIT_FILE_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies End of Year File Resubmit Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOY_IND_RESUBMIT_BATCH_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies End of Year Batch Resubmit Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOY_IND_RESUBMIT_MISSING_FILE_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies End of Year Missing File Resubmit Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_APTC_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies APTC Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_IFSV_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies IFSV Request processing</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOM_IND_RESUBMIT_FILE_PORTAL_REJECTION_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies end of month individual file resubmission due to TPE rejection</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOM_IND_RESUBMIT_BATCH_PORTAL_REJECTION_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies end of month individual batch resubmission due to TPE rejection</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOM_SHOP_RESUBMIT_FILE_PORTAL_REJECTION_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies end of month small business health options program(SHOP) file resubmission due to TPE rejection</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="IRS_EOM_SHOP_RESUBMIT_BATCH_PORTAL_REJECTION_REQ">
+				<xsd:annotation>
+					<xsd:documentation>Identifies end of month small business health options program(SHOP) batch resubmission due to TPE rejection</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="DocumentSequenceNumType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Document Sequence Number Type</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2014-07-18</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>ACA</VersionDescriptionTxt>
+					<DescriptionTxt>Developed a generic sequence number (range 00001-99999) for documents</DescriptionTxt>
+					<CACInd>N</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:pattern value="(0000[1-9]|000[1-9][0-9]|00[1-9][0-9][0-9]|0[1-9][0-9][0-9][0-9]|[1-9][0-9][0-9][0-9][0-9])"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="DocumentSystemFileNameType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Document System File Name Type</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2013-10-31</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial Version</VersionDescriptionTxt>
+					<DescriptionTxt>A document system file name pattern definition representing “yyyyMMdd'T'HHmmssSSS'Z.</DescriptionTxt>
+					<CACInd>N</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:pattern value="(EOM|EOY)_Request_(0000[1-9]|000[1-9][0-9]|00[1-9][0-9][0-9]|0[1-9][0-9][0-9][0-9]|[1-9][0-9][0-9][0-9][0-9])_[1-9][0-9]{3}(0[1-9]|1[0-2])(0[1-9]|[1-2][0-9]|3[0-1])T(0[0-9]|1[0-9]|2[0-3])(0[0-9]|[1-5][0-9])(0[0-9]|[1-5][0-9])[0-9]{3}Z\.xml"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="ExchangeIdType">
+		<xsd:annotation>
+			<xsd:documentation>
+				<Component>
+					<DictionaryEntryNm>Exchange Identification Type</DictionaryEntryNm>
+					<MajorVersionNum>1</MajorVersionNum>
+					<MinorVersionNum>0</MinorVersionNum>
+					<VersionEffectiveBeginDt>2012-01-08</VersionEffectiveBeginDt>
+					<VersionDescriptionTxt>Initial Version</VersionDescriptionTxt>
+					<DescriptionTxt>A exchange identifier used for all request and response messages in ACA messages exchanges.The CMS Exchange ID will be a part of the MessageID in the SOAP header</DescriptionTxt>
+					<CACInd>N</CACInd>
+					<Status>A</Status>
+				</Component>
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:pattern value="[0-9]{2}\.[a-zA-Z]{2}[a-zA-Z*]{1}\.[a-zA-Z0-9]{3}\.[0-9]{3}\.[0-9]{3}"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+</xsd:schema>

@@ -26,6 +26,7 @@ describe Policy, :dbclean => :after_each do
     :employer,
     :responsible_party,
     :transaction_set_enrollments,
+    :federal_transmissions,
     :premium_payments
   ].each do |attribute|
     it { should respond_to attribute }
@@ -36,6 +37,10 @@ describe Policy, :dbclean => :after_each do
 
     it "has the correct default hbx_enrollment_ids" do
       expect(subject.hbx_enrollment_ids).to eq [subject.eg_id]
+    end
+
+    it "has the correct default carrier_to_bill value" do
+      expect(subject.carrier_to_bill).to eq(true)
     end
 
     it "has the correct rating_area value" do
@@ -277,7 +282,7 @@ describe Policy, :dbclean => :after_each do
         expect(found_policy.tot_res_amt).to eq tot_res_amt
         expect(found_policy.pre_amt_tot).to eq pre_amt_tot
         expect(found_policy.employer_contribution).to eq employer_contribution
-        expect(found_policy.carrier_to_bill).to eq carrier_to_bill
+        expect(found_policy.carrier_to_bill).to eq true
       end
     end
 
@@ -287,6 +292,7 @@ describe Policy, :dbclean => :after_each do
         expect(found_policy.persisted?).to eq true
       end
     end
+
   end
 
   describe '#check_for_cancel_or_term' do
@@ -594,4 +600,307 @@ describe Policy, :dbclean => :after_each do
     end
   end
 
+end
+
+describe '.terminate_as_of', :dbclean => :after_each do
+  let(:coverage_start) { Date.new(2014, 1, 1) }
+  let(:enrollee) { build(:subscriber_enrollee, coverage_start: coverage_start) }
+  let(:policy) { build(:policy, enrollees: [ enrollee ]) }
+  before { policy.save! }
+
+  context 'when end date after start date' do
+    let(:coverage_end) { Date.new(2014, 1, 31) }
+    it 'should terminate the policy with given end date' do
+      policy.terminate_as_of(coverage_end)
+      expect(policy.policy_end).to eq coverage_end
+      expect(policy.aasm_state).to eq "terminated"
+    end
+  end
+
+  context 'when end date before start date' do
+    let(:coverage_end) { Date.new(2013, 12, 1) }
+    it 'should cancel the policy with start date.' do
+      policy.terminate_as_of(coverage_end)
+      expect(policy.policy_end).to eq coverage_start
+      expect(policy.aasm_state).to eq "canceled"
+    end
+  end
+end
+
+describe '.termination_event_exempt_from_notification?', :dbclean => :after_each do
+  let(:eg_id) { '1' }
+  let(:carrier_id) { '2' }
+  let(:plan_id) { '3' }
+  let(:plan_hios_id) { "a hios id" }
+  let(:plan) { Plan.create!(:name => "test_plan", :hios_plan_id => plan_hios_id, carrier_id: carrier_id, :coverage_type => "health") }
+  let(:policy) {Policy.new(enrollment_group_id: eg_id, carrier_id: carrier_id, plan: plan, coverage_start: coverage_start, coverage_end: nil, kind: 'individual', enrollees: [enrollee1, enrollee2])}
+  let(:responsible_party_id) { '1' }
+  let(:broker_id) { '3' }
+  let(:applied_aptc) { 1.0 }
+  let(:tot_res_amt) { 1.0 }
+  let(:pre_amt_tot) { 1.0 }
+  let!(:child)   {
+    person = FactoryGirl.create :person, dob: Date.new(1998, 9, 6)
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+  let!(:primary) {
+    person = FactoryGirl.create :person, dob: Date.new(1970, 5, 1)
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+  let(:coverage_start) {Date.new(2019, 1, 1)}
+  let(:coverage_end) {coverage_start.end_of_year}
+  let(:enrollee1) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: coverage_start)}
+  let(:enrollee2) { Enrollee.new(m_id: child.authority_member.hbx_member_id, rel_code: 'child', coverage_start: coverage_start)}
+
+  before do
+    policy.responsible_party_id = responsible_party_id
+    policy.broker_id = broker_id
+    policy.applied_aptc = applied_aptc
+    policy.tot_res_amt = tot_res_amt
+    policy.pre_amt_tot = pre_amt_tot
+  end
+
+  context 'given no policy exists' do
+    it 'saves the policy and do notify' do
+      found_policy = Policy.find_or_update_policy(policy)
+      expect(found_policy.persisted?).to eq true
+      exempt_notification = Policy.termination_event_exempt_from_notification?(nil, found_policy)
+      expect(exempt_notification).to eq false
+    end
+  end
+
+  context "given:
+  - policy exists
+  - ivl policy
+  - health policy
+  - existing policy has nil end date(subscriber.coverage_end = nil)
+  - finds and updates the policy
+  - no change in (term_for_np) NPT flag
+  " do
+
+    it "with updated_policy end date to 12/31/PY and don't notify" do
+      existing_policy = Policy.create!(eg_id: eg_id, carrier_id: carrier_id, plan: plan, coverage_start: coverage_start, coverage_end: nil, kind: 'individual', enrollees: [enrollee1, enrollee2])
+      found_policy = Policy.find_or_update_policy(policy)
+      found_policy.enrollees.where(rel_code: 'self').first.update_attributes!(coverage_end: coverage_end)
+      found_policy.enrollees.where(rel_code: 'child').first.update_attributes!(coverage_end: coverage_end)
+      exempt_notification = Policy.termination_event_exempt_from_notification?(existing_policy, found_policy)
+
+      expect(found_policy.term_for_np).to eq false
+      expect(existing_policy.term_for_np).to eq false
+      expect(found_policy).to eq existing_policy
+      expect(found_policy.responsible_party_id).to eq responsible_party_id
+      expect(found_policy.is_shop?).to eq false
+      expect(found_policy.coverage_type).to eq "health"
+      expect(exempt_notification).to eq true
+    end
+
+    it "with only dependent end date to 12/31 and don't notify" do
+      existing_policy = Policy.create!(eg_id: eg_id, carrier_id: carrier_id, plan: plan, coverage_start: coverage_start, coverage_end: nil, kind: 'individual', enrollees: [enrollee1, enrollee2])
+      found_policy = Policy.find_or_update_policy(policy)
+      found_policy.enrollees.where(rel_code: 'child').first.update_attributes!(coverage_end: coverage_end)
+      exempt_notification = Policy.termination_event_exempt_from_notification?(existing_policy, found_policy)
+
+      expect(found_policy.term_for_np).to eq false
+      expect(existing_policy.term_for_np).to eq false
+      expect(found_policy).to eq existing_policy
+      expect(found_policy.responsible_party_id).to eq responsible_party_id
+      expect(found_policy.is_shop?).to eq false
+      expect(found_policy.coverage_type).to eq "health"
+      expect(exempt_notification).to eq true
+    end
+
+    it "with only dependent end date from another end_date to 12/31 and do notify" do
+      existing_policy = Policy.create!(eg_id: eg_id, carrier_id: carrier_id, plan: plan, coverage_start: coverage_start, coverage_end: nil, kind: 'individual', enrollees: [enrollee1, enrollee2])
+      found_policy = Policy.find_or_update_policy(policy)
+      existing_policy.enrollees.where(rel_code: 'child').first.update_attributes!(coverage_end: Date.new(2019,7,31))
+      found_policy.enrollees.where(rel_code: 'child').first.update_attributes!(coverage_end: coverage_end)
+      exempt_notification = Policy.termination_event_exempt_from_notification?(existing_policy, found_policy)
+
+      expect(found_policy.term_for_np).to eq false
+      expect(existing_policy.term_for_np).to eq false
+      expect(found_policy).to eq existing_policy
+      expect(found_policy.responsible_party_id).to eq responsible_party_id
+      expect(found_policy.is_shop?).to eq false
+      expect(found_policy.coverage_type).to eq "health"
+      expect(exempt_notification).to eq false
+    end
+
+    it "with only dependent end date not to 12/31 and do notify" do
+      existing_policy = Policy.create!(eg_id: eg_id, carrier_id: carrier_id, plan: plan, coverage_start: coverage_start, coverage_end: nil, kind: 'individual', enrollees: [enrollee1, enrollee2])
+      found_policy = Policy.find_or_update_policy(policy)
+      found_policy.enrollees.where(rel_code: 'child').first.update_attributes!(coverage_end: Date.new(2019,7,31))
+      exempt_notification = Policy.termination_event_exempt_from_notification?(existing_policy, found_policy)
+
+      expect(found_policy.term_for_np).to eq false
+      expect(existing_policy.term_for_np).to eq false
+      expect(found_policy).to eq existing_policy
+      expect(found_policy.responsible_party_id).to eq responsible_party_id
+      expect(found_policy.is_shop?).to eq false
+      expect(found_policy.coverage_type).to eq "health"
+      expect(exempt_notification).to eq false
+    end
+  end
+
+  context "given:
+  - policy exists
+  - ivl policy
+  - health coverage policy
+  - existing policy end_date has 12/31/PY
+  - finds and updates the policy
+  " do
+
+    it "with enrollee end date to 12/31 and don't notify" do
+      existing_policy = Policy.create!(eg_id: eg_id, carrier_id: carrier_id, plan: plan, coverage_start: coverage_start, coverage_end: coverage_end, kind: 'individual', enrollees: [enrollee1, enrollee2])
+      found_policy = Policy.find_or_update_policy(policy)
+      found_policy.enrollees.where(rel_code: 'child').first.update_attributes!(coverage_end: coverage_end)
+      exempt_notification = Policy.termination_event_exempt_from_notification?(existing_policy, found_policy)
+
+      expect(found_policy.term_for_np).to eq false
+      expect(existing_policy.term_for_np).to eq false
+      expect(found_policy).to eq existing_policy
+      expect(found_policy.responsible_party_id).to eq responsible_party_id
+      expect(found_policy.is_shop?).to eq false
+      expect(found_policy.coverage_type).to eq "health"
+      expect(exempt_notification).to eq true
+    end
+
+    it "with only dependent end date not to 12/31 and do notify" do
+      existing_policy = Policy.create!(eg_id: eg_id, carrier_id: carrier_id, plan: plan, coverage_start: coverage_start, coverage_end: coverage_end, kind: 'individual', enrollees: [enrollee1, enrollee2])
+      found_policy = Policy.find_or_update_policy(policy)
+      found_policy.enrollees.where(rel_code: 'child').first.update_attributes!(coverage_end: Date.new(2019,7,31))
+      exempt_notification = Policy.termination_event_exempt_from_notification?(existing_policy, found_policy)
+
+      expect(found_policy.term_for_np).to eq false
+      expect(existing_policy.term_for_np).to eq false
+      expect(found_policy).to eq existing_policy
+      expect(found_policy.responsible_party_id).to eq responsible_party_id
+      expect(found_policy.is_shop?).to eq false
+      expect(found_policy.coverage_type).to eq "health"
+      expect(exempt_notification).to eq false
+    end
+
+    it "with policy end_date to 12/31, npt flag true and do notify" do
+      existing_policy = Policy.create!(eg_id: eg_id, carrier_id: carrier_id, plan: plan, coverage_start: coverage_start, coverage_end: coverage_end, kind: 'individual', enrollees: [enrollee1, enrollee2])
+      found_policy = Policy.find_or_update_policy(policy)
+      found_policy.update_attributes!(term_for_np: true)
+      found_policy.enrollees.where(rel_code: 'self').first.update_attributes!(coverage_end: coverage_end)
+      exempt_notification = Policy.termination_event_exempt_from_notification?(existing_policy, found_policy)
+
+      expect(found_policy.term_for_np).to eq true
+      expect(existing_policy.term_for_np).to eq false
+      expect(found_policy).to eq existing_policy
+      expect(found_policy.responsible_party_id).to eq responsible_party_id
+      expect(found_policy.is_shop?).to eq false
+      expect(found_policy.coverage_type).to eq "health"
+      expect(exempt_notification).to eq false
+    end
+  end
+end
+
+describe "#cancel_renewal", :dbclean => :after_each do
+  let(:eg_id) { '1' }
+  let(:carrier) {Carrier.create!(:termination_cancels_renewal => true)}
+  let(:plan) { Plan.create!(:name => "test_plan", carrier_id: carrier.id, hios_plan_id: 123 ,:coverage_type => "health", year: Date.today.next_year.year) }
+  let(:active_plan) { Plan.create!(:name => "test_plan", carrier_id: carrier.id, hios_plan_id: 123, renewal_plan: plan, :coverage_type => "health", year: Date.today.year) }
+  let(:catastrophic_active_plan) { Plan.create!(:name => "test_plan", metal_level: 'catastrophic', hios_plan_id: '94506DC0390008', carrier_id: carrier.id, renewal_plan: plan, :coverage_type => "health", year: Date.today.year) }
+  let!(:primary) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+  let(:coverage_start) { Date.today.next_year.beginning_of_year }
+  let(:enrollee) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: Date.today.beginning_of_month)}
+  let(:enrollee2) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: Date.today.next_year.beginning_of_year, coverage_end: coverage_end)}
+
+  let!(:active_policy) {
+    policy = FactoryGirl.create(:policy, enrollment_group_id: eg_id, employer: employer,
+                                 hbx_enrollment_ids: ["123"], carrier: carrier,
+                                 plan: active_plan,
+                                 coverage_start: Date.today.beginning_of_month, kind: kind)
+    policy.update_attributes(enrollees: [enrollee], hbx_enrollment_ids: ["123"])
+    policy.save
+    policy
+  }
+  let!(:renewal_policy) {
+    policy = FactoryGirl.create(:policy, enrollment_group_id: eg_id,
+                                 employer: employer, carrier: carrier, plan: plan,
+                                 coverage_start: Date.today.next_year.beginning_of_year,
+                                 coverage_end: coverage_end, kind: kind)
+  policy.update_attributes(enrollees: [enrollee2])
+  policy.save
+  policy
+  }
+
+  context "IVL: with renewal policy" do
+    let(:kind) { 'individual' }
+    let(:coverage_end) { nil}
+    let(:employer_id) { nil }
+    let(:employer) { nil}
+
+    it "should cancel renewal policy on terminating active policy" do
+      expect(active_policy.matched_ivl_renewals).to eq [renewal_policy]
+      active_policy.terminate_as_of(renewal_policy.coverage_year.end)
+      renewal_policy.reload
+      expect(renewal_policy.is_shop?).to eq false
+      expect(renewal_policy.canceled?).to eq true
+    end
+  end
+
+  context "IVL with catastrophic plan : with renewal policy" do
+    let(:kind) { 'individual' }
+    let(:coverage_end) { nil}
+    let(:employer_id) { nil }
+    let(:employer) { nil}
+    before do
+      active_policy.plan = catastrophic_active_plan
+      active_policy.save
+    end
+
+    it "should cancel renewal policy on terminating active policy" do
+      expect(active_policy.matched_ivl_renewals).to eq [renewal_policy]
+      active_policy.terminate_as_of(renewal_policy.coverage_year.end)
+      renewal_policy.reload
+      expect(renewal_policy.is_shop?).to eq false
+      expect(renewal_policy.canceled?).to eq true
+    end
+  end
+
+  context "IVL: without renewal policy" do
+    let(:kind) { 'individual' }
+    let(:coverage_end) { Date.today.next_year.beginning_of_year }
+    let(:employer_id) { nil }
+    let(:employer) { nil}
+
+
+    it "should return empty array" do
+      expect(active_policy.matched_ivl_renewals).to eq []
+    end
+  end
+
+  context "SHOP: with renewal policy" do
+    let(:kind) { 'shop' }
+    let(:coverage_end) { nil }
+    let(:employer) { FactoryGirl.create(:employer)}
+    let!(:plan_year) { FactoryGirl.create(:plan_year, employer: employer, start_date: Date.new(Date.today.year, 1, 1), end_date: Date.new(Date.today.year, 12, 31))}
+    let(:employer_id) { employer.hbx_id }
+
+    it "should not return renewal policy" do
+      expect(renewal_policy.is_shop?).to eq true
+      expect(active_policy.matched_ivl_renewals).to eq []
+    end
+  end
+
+  context "SHOP: without renewal policy" do
+    let(:kind) { 'shop' }
+    let(:coverage_end) { Date.today.next_year.beginning_of_year  }
+    let(:employer) { FactoryGirl.create(:employer)}
+    let(:employer_id) { employer.hbx_id }
+
+    it "should return empty array when checked for renewal policy" do
+      expect(renewal_policy.is_shop?).to eq true
+      expect(active_policy.matched_ivl_renewals).to eq []
+    end
+  end
 end

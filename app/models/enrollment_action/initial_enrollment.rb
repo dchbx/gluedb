@@ -18,7 +18,7 @@ module EnrollmentAction
       unless members_persisted.all?
         return false
       end
-      ep = ExternalEvents::ExternalPolicy.new(action.policy_cv, action.existing_plan, action.is_cobra?)
+      ep = ExternalEvents::ExternalPolicy.new(action.policy_cv, action.existing_plan, action.is_cobra?, market_from_payload: action.kind)
       ep.persist
     end
 
@@ -26,6 +26,9 @@ module EnrollmentAction
       amqp_connection = action.event_responder.connection
       action_helper = EnrollmentAction::ActionPublishHelper.new(action.event_xml)
       action_helper.set_event_action("urn:openhbx:terms:v1:enrollment#initial")
+      if action.existing_policy.carrier.retro_renewal_transmitted_as_renewal && action.is_retro_renewal_policy?
+        action_helper.set_event_action("urn:openhbx:terms:v1:enrollment#auto_renew")
+      end
       action_helper.keep_member_ends([])
       publish_edi(amqp_connection, action_helper.to_xml, action.hbx_enrollment_id, action.employer_hbx_id)
     end

@@ -36,7 +36,7 @@ module Generators::Reports
     def attachments
       Dir.glob(@folder+'/*.xml').inject([]) do |data, file|
         data << OpenStruct.new({
-          checksum: Digest::MD5.file(file).hexdigest,
+          checksum: Digest::SHA256.file(file).hexdigest,
           binarysize: File.size(file),
           filename: File.basename(file),
           sequence_id: File.basename(file).match(/\d{5}/)[0]
@@ -64,7 +64,7 @@ module Generators::Reports
     def serialize_service_data(xml)
       xml['ns4'].ServiceSpecificData do |xml|
         xml.ReportPeriod do |xml|
-          xml['ns3'].YearMonth '2014-12'
+          xml['ns3'].YearMonth Date.today.prev_month.strftime("%Y-%m")
         end
       end
     end
@@ -73,7 +73,7 @@ module Generators::Reports
       xml['ns4'].Attachment do |xml|
         xml['ns3'].DocumentBinary do |xml|
           xml['ns2'].ChecksumAugmentation do |xml|
-            xml.MD5ChecksumText file.checksum
+            xml['ns4'].SHA256HashValueText file.checksum
           end
           xml['ns2'].BinarySizeValue file.binarysize
         end

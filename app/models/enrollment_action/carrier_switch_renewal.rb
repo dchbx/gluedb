@@ -1,6 +1,7 @@
 module EnrollmentAction
   class CarrierSwitchRenewal < Base
     extend RenewalComparisonHelper
+    include NotificationExemptionHelper
 
     attr_accessor :terminated_policy_information
 
@@ -19,7 +20,12 @@ module EnrollmentAction
         [t_pol, t_pol.active_member_ids]
       end
       termination_results = termination_candidates.map do |rc|
-        rc.terminate_as_of(action.subscriber_start - 1.day)
+        existing_npt = rc.term_for_np
+        term_result = rc.terminate_as_of(action.subscriber_start - 1.day)
+        unless termination_event_exempt_from_notification?(rc, action.subscriber_start - 1.day, true, existing_npt)
+          Observers::PolicyUpdated.notify(rc)
+        end
+        term_result
       end
       return false unless termination_results.all?
       other_carrier_renewal_candidates = self.class.other_carrier_renewal_candidates(action)
@@ -31,7 +37,7 @@ module EnrollmentAction
       unless members_persisted.all?
         return false
       end
-      ep = ExternalEvents::ExternalPolicy.new(action.policy_cv, action.existing_plan, action.is_cobra?)
+      ep = ExternalEvents::ExternalPolicy.new(action.policy_cv, action.existing_plan, action.is_cobra?, market_from_payload: action.kind)
       ep.persist
     end
 
@@ -41,7 +47,7 @@ module EnrollmentAction
         pol, a_member_ids = tpi
         writer = ::EnrollmentAction::EnrollmentTerminationEventWriter.new(pol, a_member_ids)
         term_event_xml = writer.write("transaction_id_placeholder", "urn:openhbx:terms:v1:enrollment#terminate_enrollment")
-        employer = pol.employer 
+        employer = pol.employer
         employer_hbx_id = employer.blank? ? nil : employer.hbx_id
         term_action_helper = EnrollmentAction::ActionPublishHelper.new(term_event_xml)
         publish_edi(amqp_connection, term_action_helper.to_xml, pol.eg_id, employer_hbx_id)

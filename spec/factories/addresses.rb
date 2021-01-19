@@ -2,7 +2,7 @@ FactoryGirl.define do
   factory :address do
     address_type 'home'
     sequence(:address_1, 1111) { |n| "#{n} Awesome Street" }
-    sequence(:address_2, 111) { |n| "##{n}" }
+    sequence(:address_2, 111) { |n| "#{n}" }
     city 'Washington'
     state 'DC'
     zip '20002'

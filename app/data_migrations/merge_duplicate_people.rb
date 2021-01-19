@@ -25,6 +25,13 @@ class MergeDuplicatePeople < MongoidMigrationTask
     person_to_remove.emails.each do |email|
       person_to_keep.merge_email(email)
     end
+    unless Rails.env.test?
+      if person_to_remove.authority_member_id.blank?
+        puts("Successfully merged #{person_to_remove.id.to_s} into #{person_to_keep.id.to_s}.")
+      else
+        puts("Unable to remove authority member ID.")
+      end
+    end
   end
 
   def move_and_delete_members(keep_id,remove_id)
@@ -56,10 +63,12 @@ class MergeDuplicatePeople < MongoidMigrationTask
   end
 
   def migrate
-    move_and_delete_members(ENV['person_to_keep'],ENV['person_to_remove'])
-    unset_authority_member_id(ENV['person_to_remove'])
-    merge_addresses(ENV['person_to_keep'],ENV['person_to_remove'])
-    merge_phones(ENV['person_to_keep'],ENV['person_to_remove'])
-    merge_emails(ENV['person_to_keep'],ENV['person_to_remove'])
+    ENV['people_to_remove'].split(",").each do |person_to_remove|
+      move_and_delete_members(ENV['person_to_keep'],person_to_remove)
+      unset_authority_member_id(person_to_remove)
+      merge_addresses(ENV['person_to_keep'],person_to_remove)
+      merge_phones(ENV['person_to_keep'],person_to_remove)
+      merge_emails(ENV['person_to_keep'],person_to_remove)
+    end
   end
 end

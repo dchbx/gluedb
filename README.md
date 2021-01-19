@@ -1,4 +1,5 @@
 #Gluedb
+
 *This document is intended for the internal development team.*
 
 ##Setup
@@ -11,20 +12,15 @@ bundle install
 ```
 
 ###Setup Flat-UI
-We need Nodejs and Bower
-```
-brew install node
-npm install bower -g (this is needed to build flat-ui)
-```
 
-Get a copy of fuip-dev-1.3.0 (ask a team member)
+This is now done by installing a custom version of the gem from a private repository.
 
-```
-cd fuip-dev-1.3.0/HTML/UI/
-bower install
-```
+Consult devops for access.
 
 ###Setup Mongodb
+
+You will need mongo <= 3.4.
+
 ```
 brew install mongodb
 ```
@@ -42,7 +38,7 @@ mongorestore
 
 The software is available as open source under the terms of the MIT License (MIT)
 
-Copyright (c) 2014-2016 IdeaCrew, Inc.
+Copyright (c) 2014-2019 IdeaCrew, Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

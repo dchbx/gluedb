@@ -31,12 +31,11 @@ class UsersController < ApplicationController
     @user = User.find(params[:id])
   end
 
-
   def update
     @user = User.find(params[:id])
 
     respond_to do |format|
-      if @user.update_attributes(params[:user])
+      if @user.update_attributes_as(params[:user], current_user)
         format.html { redirect_to @user, notice: 'User was successfully updated.' }
         format.json { head :no_content }
       else
@@ -49,13 +48,15 @@ class UsersController < ApplicationController
   # DELETE /users/1
   # DELETE /users/1.json
   def destroy
-    @user = User.find(params[:id])
-    @user.destroy
+    head :access_denied
 
-    respond_to do |format|
-      format.html { redirect_to users_url }
-      format.json { head :no_content }
-    end
+    # @user = User.find(params[:id])
+    # @user.destroy
+
+    # respond_to do |format|
+    #  format.html { redirect_to users_url }
+    #  format.json { head :no_content }
+    # end
   end
 
 end

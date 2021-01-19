@@ -46,7 +46,22 @@ describe Aws::S3Storage do
         expect { subject.save(file_path, bucket_name) }.to raise_error(exception)
       end
     end
+  end
 
+  describe  "#env_bucket_name()"  do 
+    context "bucket names" do
+      it 'gives correct bucket name without an h41'do
+        allow(object).to receive(:upload_file).with(file_path, :server_side_encryption => 'AES256').and_return(true)
+        allow_any_instance_of(Aws::S3Storage).to receive(:get_object).and_return(object)
+        expect(subject.send(:env_bucket_name, bucket_name)).to eq "dchbx-gluedb-#{bucket_name}-#{aws_env}" 
+      end
+
+      it 'gives correct bucket name with an h41'do
+        allow(object).to receive(:upload_file).with(file_path, :server_side_encryption => 'AES256').and_return(true)
+        allow_any_instance_of(Aws::S3Storage).to receive(:get_object).and_return(object)
+        expect(subject.send(:env_bucket_name, bucket_name, "h41")).to eq "dchbx-enroll-aca-internal-artifact-transport-local"
+      end
+    end
   end
 
   describe "find()" do

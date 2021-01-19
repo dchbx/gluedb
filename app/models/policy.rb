@@ -28,11 +28,13 @@ class Policy
   field :tot_res_amt, as: :total_responsible_amount, type: BigDecimal, default: 0.00
   field :tot_emp_res_amt, as: :employer_contribution, type: BigDecimal, default: 0.00
   field :sep_reason, type: String, default: :open_enrollment
-  field :carrier_to_bill, type: Boolean, default: false
+  # Carrier to bill is always set to true for individual. Only Displays on _policy_detail.html.erb for IVL
+  field :carrier_to_bill, type: Boolean, default: true
   field :aasm_state, type: String
   field :updated_by, type: String
   field :is_active, type: Boolean, default: true
   field :hbx_enrollment_ids, type: Array
+  field :kind, type: String
 
 # Adding field values Carrier specific
   field :carrier_specific_plan_id, type: String
@@ -44,6 +46,9 @@ class Policy
   field :kind, type: String
   field :enrollment_kind, type: String
 
+  # flag for termination of policy due to non-payment
+  field :term_for_np, type: Boolean, default: false
+
   validates_presence_of :eg_id
   validates_presence_of :pre_amt_tot
   validates_presence_of :tot_res_amt
@@ -51,7 +56,9 @@ class Policy
 
   embeds_many :aptc_credits
   embeds_many :aptc_maximums
+
   embeds_many :cost_sharing_variants
+  embeds_many :federal_transmissions
 
   embeds_many :enrollees
   accepts_nested_attributes_for :enrollees, reject_if: :all_blank, allow_destroy: true
@@ -65,6 +72,10 @@ class Policy
   belongs_to :plan, counter_cache: true, index: true
   belongs_to :employer, counter_cache: true, index: true
   belongs_to :responsible_party
+
+  has_many :legacy_cv_transactions,
+            class_name: "Protocols::LegacyCv::LegacyCvTransaction",
+            order: { submitted_at: :desc }
 
   has_many :transaction_set_enrollments,
               class_name: "Protocols::X12::TransactionSetEnrollment",
@@ -90,6 +101,7 @@ class Policy
   before_save :invalidate_find_cache
   before_save :check_for_cancel_or_term
   before_save :check_multi_aptc
+  after_save :cancel_ivl_renewal
 
   scope :all_active_states,   where(:aasm_state.in => %w[submitted resubmitted effectuated])
   scope :all_inactive_states, where(:aasm_state.in => %w[canceled carrier_canceled terminated])
@@ -175,6 +187,33 @@ class Policy
     ]
   end
 
+  def calculated_premium_effective_date
+    subscriber_start = subscriber.coverage_start
+    non_canceled_enrollees = enrollees.reject do |en|
+      en.coverage_ended? && (en.coverage_end <= en.coverage_start)
+    end
+    # Return the enrollment start if everybody is canceled
+    return subscriber_start if non_canceled_enrollees.empty?
+    latest_possible_date = subscriber.coverage_ended? ? subscriber.coverage_end : coverage_year.end
+    # Discard end dates that are the last possible policy day,
+    # Since we are going to pick up one day after
+    latest_end_dates = non_canceled_enrollees.map(&:coverage_end).compact.reject do |d|
+      d >= latest_possible_date
+    end
+    # The last day of coverage +1 day is actually the
+    # date the premium for somebody terminated becomes effected
+    provided_end_dates = latest_end_dates.map do |d|
+      d + 1.day
+    end
+    latest_start_dates = non_canceled_enrollees.map(&:coverage_start).compact
+    (provided_end_dates + latest_start_dates).max
+  end
+
+  def effectuated?
+    edi_transactions = edi_transaction_sets
+    edi_transactions.any?{|transaction| transaction.transaction_kind == 'effectuation'}
+  end
+
   def canceled?
     subscriber.canceled?
   end
@@ -238,6 +277,9 @@ class Policy
       self.enrollees << m_enrollee
     else
       found_enrollee.merge_enrollee(m_enrollee, p_action)
+      found_enrollee.touch
+      self.touch
+      self.save!
     end
   end
 
@@ -363,12 +405,14 @@ class Policy
       found_enrollment.tot_res_amt = m_enrollment.tot_res_amt
       found_enrollment.pre_amt_tot = m_enrollment.pre_amt_tot
       found_enrollment.employer_contribution = m_enrollment.employer_contribution
-      found_enrollment.carrier_to_bill = (found_enrollment.carrier_to_bill || m_enrollment.carrier_to_bill)
+      # Carrier to bill is always set to true for individual. Only Displays on _policy_detail.html.erb for IVL
+      found_enrollment.carrier_to_bill = true
       found_enrollment.save!
       return found_enrollment
     end
+    # Observers::PolicyUpdated.notify(m_enrollment) notified in calling method before save transmission_file.rb/persist_policy
     m_enrollment.save!
-#    m_enrollment.unsafe_save!
+    #  m_enrollment.unsafe_save!
     m_enrollment
   end
 
@@ -652,8 +696,9 @@ class Policy
   def terminate_as_of(term_date)
     self.aasm_state = "hbx_terminated"
     self.enrollees.each do |en|
-      if en.coverage_end.blank? || (!en.coverage_end.blank? && (en.coverage_end > term_date))
+      if en.coverage_end.blank? || (en.coverage_end.present? && (en.coverage_end > term_date))
         en.coverage_end = term_date
+        en.coverage_end = en.coverage_start if term_date < en.coverage_start
         en.coverage_status = "inactive"
         en.employment_status_code = "terminated"
       end
@@ -793,6 +838,132 @@ class Policy
     else
       dates = self.enrollees.map(&:coverage_start) + self.enrollees.map(&:coverage_end)
       assistance_effective_date = dates.compact.sort.last
+    end
+  end
+
+  def self.update_or_create_policy_from_edi(
+      before_updated_policy = nil,
+      update_policy_record,
+      transmission_file_util,
+      etf_loop,
+      transaction_set_kind
+    )
+    updated_or_created_policy = Policy.find_or_update_policy(update_policy_record)
+    if transaction_set_kind == "effectuation"
+      updated_or_created_policy.aasm_state = 'effectuated'
+    end
+
+    etf_loop.people.each do |person_loop|
+      policy_loop = person_loop.policy_loops.first
+      enrollee = transmission_file_util.build_enrollee(person_loop, policy_loop)
+      updated_or_created_policy.merge_enrollee(enrollee, policy_loop.action)
+    end
+
+    transaction_type =  etf_loop.people.inject([]) do |type, person_loop|
+                          policy_loop = person_loop.policy_loops.first
+                          type << policy_loop.action
+                          type
+                        end
+
+    updated_or_created_policy.save!
+
+    unless policy_eligible_to_notify?(updated_or_created_policy) #if true then we don't want to notify
+      unless transaction_type.include?(:stop) && termination_event_exempt_from_notification?(before_updated_policy, updated_or_created_policy)
+        Observers::PolicyUpdated.notify(updated_or_created_policy) #notify to generate H41's && 1095A's
+      end
+    end
+    updated_or_created_policy
+  end
+
+  def self.termination_event_exempt_from_notification?(before_updated_policy, updated_policy)
+    if before_updated_policy.present?
+      #Policy End Date change - null to 12/31 AND no NPT indicator change (don't notify)
+      #Dependent Only End Date Change - null to 12/31 AND no NPT status change (don't notify)
+      if is_npt_flag_same?(before_updated_policy, updated_policy)
+        is_enrollee_coverage_end_change_to_end_of_year?(before_updated_policy, updated_policy)
+      else
+        false #we notify
+      end
+    else
+      false #we notify
+    end
+  end
+
+  def self.policy_eligible_to_notify?(updated_policy)
+    updated_policy.kind == 'coverall' || updated_policy.is_shop? || updated_policy.coverage_type.to_s.downcase != "health" || updated_policy.plan.metal_level == "catastrophic" || updated_policy.coverage_year.first.year == Time.now.year || updated_policy.coverage_year.first.year < 2018
+  end
+
+  def self.is_npt_flag_same?(before_updated_policy, updated_policy)
+    before_updated_policy.term_for_np == updated_policy.term_for_np
+  end
+
+  def self.is_enrollee_coverage_end_change_to_end_of_year?(before_updated_policy, updated_policy)
+    updated_policy.enrollees.each do |updated_enrollee|
+      before_updated_policy.enrollees.each do |before_updated_enrollee|
+        next if updated_enrollee.id != before_updated_enrollee.id
+
+        if check_enrollee_coverage_end?(updated_enrollee)
+          unless before_updated_enrollee.coverage_end.nil?
+            unless before_updated_enrollee.coverage_end == updated_enrollee.coverage_end
+              return false #we notify
+            end
+          end
+        else
+          if updated_enrollee.coverage_end.present? && before_updated_enrollee.coverage_end.nil?
+            return  false #we notify
+          else
+            unless before_updated_enrollee.coverage_end == updated_enrollee.coverage_end
+              return false  #we notify
+            end
+          end
+        end
+      end
+    end
+    true #we don't notify
+  end
+
+  def self.check_enrollee_coverage_end?(updated_enrollee)
+    (updated_enrollee.coverage_end.try(:day) == 31) && (updated_enrollee.coverage_end.try(:month) == 12)
+  end
+
+  def cancel_ivl_renewal
+    if subscriber.present? && (terminated? || canceled?) && carrier && carrier.termination_cancels_renewal
+      matched_ivl_renewals.each do |pol|
+        pol.cancel_via_hbx!
+      end
+    end
+  end
+
+  def matched_ivl_renewals
+    subscriber_person = subscriber.person
+    subscriber_person.policies.select do |pol|
+      is_ivl_renewal_policy?(pol)
+    end
+  end
+
+  def is_ivl_renewal_policy?(pol)
+    return false if pol.id == id
+    return false if pol.is_shop?
+    return false if pol.canceled?
+    return false if pol.terminated?
+    return false if pol.subscriber.blank?
+    return false if pol.subscriber.m_id != subscriber.m_id
+    return false if pol.plan.blank?
+    return false unless plan.carrier_id == pol.plan.carrier_id
+    return false unless plan.coverage_type == pol.plan.coverage_type
+    return false unless plan.year + 1 == pol.plan.year
+    return false unless plan_matched?(plan, pol.plan)
+    return false unless pol.active_member_ids.all? { |m_id| enrollees.map(&:m_id).include?(m_id)}
+    return false if pol.subscriber.coverage_end.present?
+    pol.subscriber.coverage_start == coverage_year.end + 1
+  end
+
+  def plan_matched?(active_plan, renewal_plan)
+    if active_plan.metal_level == "catastrophic" && active_plan.coverage_type == "health"
+      ['94506DC0390008','86052DC0400004'].include?(active_plan.hios_plan_id.split("-").first) &&
+          (['94506DC0390010','86052DC0400010'].include?(renewal_plan.hios_plan_id.split("-").first) || active_plan.renewal_plan == renewal_plan)
+    else
+      (active_plan.renewal_plan == renewal_plan || active_plan.renewal_plan.hios_plan_id.split("-").first == renewal_plan.hios_plan_id.split("-").first)
     end
   end
 

@@ -1,4 +1,5 @@
 if Rails.env.development?
+  begin
   require "rubycritic/rake_task"
 
   RubyCritic::RakeTask.new do |task|
@@ -9,5 +10,8 @@ if Rails.env.development?
 
     # Defaults to false
     task.verbose = true
+  end
+  rescue LoadError
+    # You don't have rubycritic.
   end
 end

@@ -13,8 +13,8 @@ module Parsers
       def persist!
         return nil if transmission_already_exists?
         edi_transmission = persist_edi_transmission(@result)
-        carrier = edi_transmission.receiver
         @result["L820s"].each do |l820|
+          carrier = find_carrier(l820)
           transaction = persist_edi_transaction(l820, edi_transmission, carrier)
           persist_premium_payments(l820, carrier, transaction)
           @progress_bar.refresh
@@ -47,6 +47,16 @@ module Parsers
           :transaction_kind => "remittance",
           :body => fs
         )
+      end
+
+      def find_carrier(l820)
+        l1000a = l820["L1000A"]
+        return nil if l1000a.blank?
+        n1 = l1000a["N1"]
+        return nil if n1.blank?
+        carrier_fein = n1[4]
+        return nil if carrier_fein.blank?
+        @import_cache.lookup_carrier_fein(carrier_fein.strip)
       end
 
       def persist_premium_payments(l820, carrier, transaction)

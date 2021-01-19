@@ -1,0 +1,208 @@
+<n1:enrollment xmlns:n1='http://openhbx.org/api/terms/1.0' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
+               xsi:schemaLocation='http://openhbx.org/api/terms/1.0 policy.xsd'>
+  <n1:type>urn:openhbx:enrollment:v1:policies#initial_enrollment</n1:type>
+  <n1:market>shop</n1:market>
+  <n1:policy xmlns:n1='http://openhbx.org/api/terms/1.0' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:schemaLocation='http://openhbx.org/api/terms/1.0 policy.xsd'>
+    <n1:id>
+      <n1:id>http://10.83.85.127/api/v2/policies/1112</n1:id>
+    </n1:id>
+    <n1:broker>
+	    <n1:id>
+		    <n1:id>broker npn for testing</n1:id>
+	    </n1:id>
+    </n1:broker>
+
+    <n1:enrollees>
+      <n1:enrollee>
+        <n1:member><n1:id>
+          <n1:id>http://10.83.85.127/api/v2/people?hbx_id=2107931</n1:id>
+          <n1:is_authoritative>true</n1:is_authoritative>
+          <n1:alias_ids>
+            <n1:alias_id>
+              <n1:id>2107931</n1:id>
+            </n1:alias_id>
+          </n1:alias_ids>
+        </n1:id>
+
+          <n1:person>
+            <n1:id>
+              <n1:id>http://10.83.85.127/api/v2/people/53e68efeeb899ad9ca00453d</n1:id>
+              <n1:is_authoritative>true</n1:is_authoritative>
+              <n1:alias_ids>
+                <n1:alias_id>
+                  <n1:id>2107931</n1:id>
+                </n1:alias_id>
+              </n1:alias_ids>
+            </n1:id>
+
+            <n1:person_name>
+              <n1:person_surname>Person</n1:person_surname>
+              <n1:person_given_name>FirstName</n1:person_given_name>
+              <n1:person_middle_name>OfThe</n1:person_middle_name>
+              <n1:person_full_name>FirstName OfThe Person</n1:person_full_name>
+
+            </n1:person_name>
+            <n1:addresses>
+              <n1:address>
+                <n1:type>urn:openhbx:terms:v1:address_type#home</n1:type>
+                <n1:address_line_1>123 Some Street NW</n1:address_line_1>
+                <n1:location_city_name>Washington</n1:location_city_name>
+                <n1:location_state_code>DC</n1:location_state_code>
+                <n1:location_postal_code>20011</n1:location_postal_code>
+                <n1:location_country_code>US</n1:location_country_code>
+              </n1:address>
+
+            </n1:addresses>
+            <n1:emails>
+              <n1:email>
+                <n1:type>urn:openhbx:terms:v1:email_type#home</n1:type>
+                <n1:email_address>an_email@gmail.com</n1:email_address>
+              </n1:email>
+
+            </n1:emails>
+            <n1:created_at>2014-08-09T21:13:34</n1:created_at>
+            <n1:modified_at>2014-12-24T23:43:56</n1:modified_at>
+
+
+          </n1:person>
+          <n1:person_demographics>
+            <n1:ssn>123456789</n1:ssn>
+            <n1:sex>urn:openhbx:terms:v1:gender#male</n1:sex>
+            <n1:birth_date>19700501</n1:birth_date>
+            <n1:is_incarcerated>false</n1:is_incarcerated>
+            <n1:citizen_status>urn:openhbx:terms:v1:citizen_status#us_citizen</n1:citizen_status>
+            <n1:is_state_resident>true</n1:is_state_resident>
+            <n1:created_at>2014-08-09T21:13:34</n1:created_at>
+            <n1:modified_at>2014-12-24T23:43:56</n1:modified_at>
+
+          </n1:person_demographics>
+
+          <n1:employer_links>
+		  <n1:employer_link><n1:id><n1:id>http://10.83.85.127/api/v1/employers/53e6731deb899a460302a120</n1:id></n1:id>
+              <n1:name>Employer Name</n1:name>
+            </n1:employer_link>
+          </n1:employer_links>
+          <n1:person_health>
+            <n1:is_tobacco_user>unknown</n1:is_tobacco_user>
+          </n1:person_health>
+          <n1:is_active>true</n1:is_active>
+          <n1:created_at>2014-08-09T21:13:34</n1:created_at>
+          <n1:modified_at>2014-12-24T23:43:56</n1:modified_at>
+
+        </n1:member>
+        <n1:is_subscriber>true</n1:is_subscriber>
+        <n1:benefit_status>urn:openhbx:terms:v1:benefit_status#active</n1:benefit_status>
+        <n1:benefit>
+          <n1:premium_amount>359.6</n1:premium_amount>
+          <n1:begin_date>20140101</n1:begin_date>
+          <n1:carrier_assigned_policy_id>1355177901805056453523</n1:carrier_assigned_policy_id>
+          <n1:carrier_assigned_enrollee_id>909999161</n1:carrier_assigned_enrollee_id>
+        </n1:benefit>
+      </n1:enrollee>
+      <n1:enrollee>
+        <n1:member><n1:id>
+          <n1:id>http://10.83.85.127/api/v2/people?hbx_id=10000945</n1:id>
+          <n1:is_authoritative>true</n1:is_authoritative>
+          <n1:alias_ids>
+            <n1:alias_id>
+              <n1:id>10000945</n1:id>
+            </n1:alias_id>
+          </n1:alias_ids>
+        </n1:id>
+
+          <n1:person>
+            <n1:id>
+              <n1:id>http://10.83.85.127/api/v2/people/53e6a1abeb899ad9ca0692f6</n1:id>
+              <n1:is_authoritative>true</n1:is_authoritative>
+              <n1:alias_ids>
+                <n1:alias_id>
+                  <n1:id>10000945</n1:id>
+                </n1:alias_id>
+              </n1:alias_ids>
+            </n1:id>
+
+            <n1:person_name>
+              <n1:person_surname>Person</n1:person_surname>
+              <n1:person_given_name>Dependent</n1:person_given_name>
+              <n1:person_full_name>Person Dependent</n1:person_full_name>
+
+            </n1:person_name>
+            <n1:addresses>
+              <n1:address>
+                <n1:type>urn:openhbx:terms:v1:address_type#home</n1:type>
+                <n1:address_line_1>123 Some Street NW</n1:address_line_1>
+                <n1:location_city_name>Washington</n1:location_city_name>
+                <n1:location_state_code>DC</n1:location_state_code>
+                <n1:location_postal_code>20011</n1:location_postal_code>
+                <n1:location_country_code>US</n1:location_country_code>
+              </n1:address>
+
+            </n1:addresses>
+            <n1:created_at>2014-08-09T22:33:15</n1:created_at>
+            <n1:modified_at>2014-12-24T15:06:08</n1:modified_at>
+
+
+          </n1:person>
+          <n1:person_demographics>
+            <n1:sex>urn:openhbx:terms:v1:gender#male</n1:sex>
+            <n1:birth_date>20140415</n1:birth_date>
+            <n1:is_incarcerated>false</n1:is_incarcerated>
+            <n1:citizen_status>urn:openhbx:terms:v1:citizen_status#us_citizen</n1:citizen_status>
+            <n1:is_state_resident>true</n1:is_state_resident>
+            <n1:created_at>2014-08-09T22:33:15</n1:created_at>
+            <n1:modified_at>2014-12-24T15:06:08</n1:modified_at>
+
+          </n1:person_demographics>
+
+          <n1:person_health>
+            <n1:is_tobacco_user>unknown</n1:is_tobacco_user>
+          </n1:person_health>
+          <n1:is_active>true</n1:is_active>
+          <n1:created_at>2014-08-09T22:33:15</n1:created_at>
+          <n1:modified_at>2014-12-24T15:06:08</n1:modified_at>
+
+        </n1:member>
+        <n1:is_subscriber>false</n1:is_subscriber>
+        <n1:benefit_status>urn:openhbx:terms:v1:benefit_status#active</n1:benefit_status>
+        <n1:benefit>
+          <n1:premium_amount>376.46</n1:premium_amount>
+          <n1:begin_date>20140702</n1:begin_date>
+        </n1:benefit>
+      </n1:enrollee>
+    </n1:enrollees>
+    <n1:enrollment>
+      <n1:plan>
+        <n1:id>
+          <n1:id>http://10.83.85.127/api/v2/plans/53e67210eb899a46030001b1</n1:id>
+        </n1:id>
+
+        <n1:coverage_type>urn:openhbx:terms:v1:qhp_benefit_coverage#health</n1:coverage_type>
+        <n1:carrier><n1:id>
+          <n1:id>53e67210eb899a4603000004</n1:id>
+        </n1:id>
+
+          <n1:name>CareFirst</n1:name>
+          <n1:is_active>true</n1:is_active>
+        </n1:carrier>
+        <n1:plan_year>2014</n1:plan_year>
+        <n1:name>BluePreferred PPO $1,000 100%/80%</n1:name>
+        <n1:is_dental_only>false</n1:is_dental_only>
+
+      </n1:plan>
+      <n1:shop_market>
+	      <n1:employer_link><n1:id><n1:id>http://10.83.85.127/api/v1/employers/53e6731deb899a460302a120</n1:id></n1:id>
+          <n1:name>Employer Name</n1:name>
+        </n1:employer_link>
+        <n1:total_employer_responsible_amount>11.1</n1:total_employer_responsible_amount>
+      </n1:shop_market>
+      <n1:premium_total_amount>736.06</n1:premium_total_amount>
+      <n1:total_responsible_amount>736.06</n1:total_responsible_amount>
+    </n1:enrollment>
+    <n1:policy_state>urn:openhbx:terms:v1:policy_state#submitted</n1:policy_state>
+    <n1:request_submitted_timestamp>2014-09-12T14:45:43+00:00</n1:request_submitted_timestamp>
+    <n1:is_active>true</n1:is_active>
+    <n1:created_at>2014-08-09T21:13:34</n1:created_at>
+    <n1:modified_at>2014-09-12T14:45:43</n1:modified_at>
+
+  </n1:policy>
+</n1:enrollment>

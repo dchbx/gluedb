@@ -17,8 +17,8 @@ module Generators::Reports
     }
 
     def initialize(policy, options = {})
-      @notice_type = options[:notice_type] || false
-      @npt_policy = options[:npt_policy] || false
+      @notice_type = options[:notice_type] || 'new'
+      @npt_policy  = options[:npt_policy]  || false
 
       # multi_version = options[:multi_version] || false
       # @void = options[:void] || false
@@ -52,6 +52,7 @@ module Generators::Reports
       # @policy.plan.carrier.name
       @notice.qhp_id = @policy.plan.hios_plan_id.gsub('-','')
       @notice.policy_id = prepend_zeros(@policy.id.to_s, 6)
+      @notice.subscriber_hbx_id = @policy.subscriber.m_id
 
       if @policy.responsible_party_id.present?
         append_responsible_party_address

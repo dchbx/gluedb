@@ -16,18 +16,18 @@ describe ChangePolicyEndDate, dbclean: :after_each do
 
   describe "changing the end dates for a policy" do 
     before(:each) do 
-      allow(ENV).to receive(:[]).with("eg_id").and_return(policy.eg_id)
+      allow(ENV).to receive(:[]).with("eg_ids").and_return(policy.eg_id)
       allow(ENV).to receive(:[]).with("end_date").and_return(end_date)
     end
 
     it "should have an end date" do
-      subject.deactivate_enrollees
+      subject.deactivate_enrollees(policy)
       policy.reload
       expect(policy.policy_end).to eq ENV['end_date'].to_date
     end
 
     it "should alter the aasm state" do
-      subject.change_aasm_state 
+      subject.change_aasm_state(policy)
       policy.reload
       if policy.policy_start == ENV['end_date'].to_date
         expect(policy.aasm_state.downcase).to eq 'canceled'

@@ -37,6 +37,7 @@ describe Parsers::Edi::IncomingTransaction do
             :hbx_enrollment_ids => JSON.dump(policy.hbx_enrollment_ids)
           }
     }, "")
+    allow(Observers::PolicyUpdated).to receive(:notify).with(policy)
   end
 
   it 'imports enrollee carrier member id' do
@@ -100,6 +101,11 @@ describe Parsers::Edi::IncomingTransaction do
         expect(enrollee.policy.aasm_state).to eq 'terminated'
         expect(policy.aasm_state).to eq 'terminated'
       end
+
+      it 'notifies of policy termination' do
+        expect(Observers::PolicyUpdated).to receive(:notify).with(policy)
+        incoming.import
+      end
     end
 
     context 'when coverage start/end are different, and the reason is non-payment' do
@@ -160,6 +166,11 @@ describe Parsers::Edi::IncomingTransaction do
 
         expect(enrollee.policy.aasm_state).to eq 'canceled'
         expect(policy.aasm_state).to eq 'canceled'
+      end
+
+      it 'notifies of policy cancelation' do
+        expect(Observers::PolicyUpdated).to receive(:notify).with(policy)
+        incoming.import
       end
     end
   end

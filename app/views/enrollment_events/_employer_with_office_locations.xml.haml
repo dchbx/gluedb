@@ -1,0 +1,29 @@
+- if !employer_with_office_locations.employer_office_locations.blank?
+  %office_locations{:xmlns => "http://openhbx.org/api/terms/1.0"}
+    - employer_with_office_locations.employer_office_locations.each do |location|
+      %office_location
+        - unless location.name.blank?  
+          %name= location.name
+        %primary= location.is_primary ? "true" : "false"
+        - if !location.address.blank?
+          %address
+            %type= "urn:openhbx:terms:v1:address_type#" + location.address.address_type
+            %address_line_1= location.address.address_1
+            - unless location.address.address_2.blank?
+              %address_line_2= location.address.address_2
+            - unless location.address.address_3.blank?
+              %address_line_3= location.address.address_3
+            - unless location.address.city.blank?
+              %location_city_name= location.address.city
+            - unless location.address.county.blank?
+              %location_county_name= location.address.county
+            - unless location.address.state.blank?
+              %location_state_code= location.address.state 
+            - unless location.address.zip.blank?
+              %postal_code= location.address.zip
+        - if !location.phone.blank?
+          %phone
+            %type= "urn:openhbx:terms:v1:phone_type#" + location.phone.phone_type
+            - unless location.phone.phone_number.blank?
+              %full_phone_number= location.phone.phone_number
+            %is_preferred= location.phone.primary ? "true" : "false"

@@ -12,12 +12,12 @@ module Generators::Reports
     let(:household1) { double(tax_households: [double, double]) }
     let(:household2) { double }
 
-    let(:mock_household) { PdfTemplates::Household.new }
-    let(:mock_taxhousehold) { PdfTemplates::TaxHousehold.new }
-    let(:mock_household_coverage) { PdfTemplates::TaxHouseholdCoverage.new }
-    let(:mock_member) { double }
-    let(:mock_tax_member) { PdfTemplates::Enrollee.new }
-    let(:tax_household) { double(primary: double, spouse: double, dependents: []) }
+    # let(:mock_household) { PdfTemplates::Household.new }
+    # let(:mock_taxhousehold) { PdfTemplates::TaxHousehold.new }
+    # let(:mock_household_coverage) { PdfTemplates::TaxHouseholdCoverage.new }
+    # let(:mock_member) { double }
+    # let(:mock_tax_member) { PdfTemplates::Enrollee.new }
+    # let(:tax_household) { double(primary: double, spouse: double, dependents: []) }
 
     # context 'tax household' do
     #   it 'should have same number of coverages as number of months' do
@@ -40,9 +40,9 @@ module Generators::Reports
     # end
 
     context 'tax household member builder' do
-      let(:household_member) { double(family_member: family_member)}
+      let(:household_member) { double(family_member: family_member, class: 'TaxHouseholdMember')}
       let(:family_member) { double(person: person)}
-      let(:person) { double(authority_member: nil)}
+      let(:person) { double(authority_member: nil) }
 
       context 'when household member passed is nil' do 
         let(:household_member) { nil }

@@ -19,9 +19,9 @@ module Generators::Reports
     def get_template(options)
       notice_type = (['new', 'corrected'].include?(options[:notice_type]) ? 'new' : options[:notice_type])
 
-      template_name = if [2016, 2017].include?(options[:calender_year]) && options[:notice_type] != 'void'
+      template_name = if (options[:calender_year] >= 2016 && options[:notice_type] != 'void')
         settings[:tax_document][options[:calender_year]][notice_type][:template][options[:qhp_type]]
-      elsif options[:calender_year] == 2017 && options[:notice_type] == 'void'
+      elsif (options[:calender_year] >= 2017 && options[:notice_type] == 'void')
         settings[:tax_document][options[:calender_year]][notice_type][:template][options[:void_type]]
       else
         settings[:tax_document][options[:calender_year]][notice_type][:template]
@@ -46,6 +46,7 @@ module Generators::Reports
       end
 
       if options[:notice_type] == 'void'
+        @void = true
         instance_variable_set("@void_#{options[:calender_year]}", true)
       end
 
@@ -53,30 +54,29 @@ module Generators::Reports
       @catastrophic_corrected = false
       @catastrophic_aptc = false
       @catastrophic_confirmation =  false
-      @void = @void_2014
     end
 
     def process
       fill_envelope
       fill_coverletter
-      fill_hbx_id_for_coverletter if @calender_year == 2017
+      fill_hbx_id_for_coverletter if @calender_year >= 2017
       return if @catastrophic_confirmation
       if @catastrophic_corrected
         go_to_page(3)
-      elsif @notice_2016 || @void_2016 || @void_2017
+      elsif (@notice_2016 || (@void && @calender_year >= 2016))
         go_to_page(9)
-      elsif @calender_year == 2017
+      elsif @calender_year >= 2017
         go_to_page(11)
       else
         go_to_page(5)
       end
       fill_subscriber_details
-      fill_household_details unless (@void || @void_2016)
+      fill_household_details unless (@void_2014 || @void_2016)
       fill_preimum_details
     end
 
     def fill_envelope
-      if @calender_year == 2017
+      if @calender_year >= 2017
         x_pos = mm2pt(14.00) - @margin[0]
         y_pos = 790.86 - mm2pt(44.00) - 65
         bounding_box([x_pos, y_pos], :width => 300) do
@@ -126,6 +126,11 @@ module Generators::Reports
           open_sans_font
           text "#{Date.today.strftime('%m/%d/%Y')}", size: 10
         end
+      elsif @calender_year >= 2018
+        bounding_box([8.5, 508+padding], :width => 200) do
+          open_sans_font
+          text "#{Date.today.strftime('%m/%d/%Y')}", size: 10
+        end
       else
         bounding_box([15, 553+padding], :width => 200) do
           text "#{Date.today.strftime('%m/%d/%Y')}"
@@ -133,7 +138,7 @@ module Generators::Reports
       end
 
       #For Printing Address on template
-      if @calender_year == 2017
+      if @calender_year >= 2017
         bounding_box([8, 590+padding], :width => 300) do
           open_sans_font
           fill_recipient_contact(10)
@@ -161,7 +166,7 @@ module Generators::Reports
 
       x_pos = 42 if @catastrophic_corrected
 
-      padding = 12 unless @void
+      padding = 12 unless @void_2014
       padding = 20 if @void_2016
       y_pos = 409 if @void_2016
       y_pos = 444 if @void_2015
@@ -172,6 +177,11 @@ module Generators::Reports
           open_sans_font
           text "#{@notice.recipient.name}:", size: 10
         end
+      elsif @calender_year >= 2018
+        bounding_box([36, 447.6+padding], :width => 200) do
+          open_sans_font
+          text "#{@notice.recipient.name_first}:", size: 10
+        end
       else
         bounding_box([x_pos, y_pos+padding], :width => 200) do
           text "#{@notice.recipient.name}:"
@@ -180,13 +190,10 @@ module Generators::Reports
 
       padding = -20 if @void_2016
 
-      if @void_2017
-        canceled_policies = @notice.canceled_policies.split(',')
-        print_policies(canceled_policies, 18, 285+padding)
-        if @notice.active_policies.present?
-          active_policies = @notice.active_policies.split(',')
-          print_policies(active_policies, 18, 130+padding)
-        end
+      if @void && @calender_year >= 2018
+        set_positions(340, padding)
+      elsif @void_2017
+        set_positions(285, padding)
       end
 
       if @void_2016
@@ -221,17 +228,26 @@ module Generators::Reports
     end
 
     def fill_hbx_id_for_coverletter
-      if @qhp_type.present? && !@void_2017
+      if @calender_year >= 2018 && !@void
+        pages = [4, 5]
+      elsif @qhp_type.present? && (!@void || (@void && @calender_year <= 2016))
         pages = [4, 5, 6]
-      elsif @void_2017
+      elsif @void && @calender_year >= 2017
         pages = [4]
       end
 
       pages.each do |page|
         go_to_page(page)
-        bounding_box([400, 739.2], :width => 200) do
-          open_sans_font
-          text "#{@hbx_id}", size: 8
+        if @calender_year >= 2018
+          bounding_box([405, 753], :width => 200) do
+            open_sans_font
+            text "#{@hbx_id}", size: 8
+          end
+        else
+          bounding_box([400, 739.2], :width => 200) do
+            open_sans_font
+            text "#{@hbx_id}", size: 8
+          end
         end
       end
     end
@@ -249,7 +265,6 @@ module Generators::Reports
     end
 
     def fill_subscriber_details
-
       col1 = mm2pt(-2)
       col2 = mm2pt(51.50)
       col3 = mm2pt(102.50)
@@ -258,9 +273,9 @@ module Generators::Reports
 
       x_pos_corrected = mm2pt(128.50)
       y_pos_corrected = 790.86 - mm2pt(31.80)
-      y_pos_corrected = 790.86 - mm2pt(23.80) if @void_2015 || @void_2016 || @void_2017
+      y_pos_corrected = 790.86 - mm2pt(23.80) if @void && @calender_year >= 2015
 
-      if @corrected || @void || @void_2015 || @void_2016 || @void_2017
+      if @corrected || @void
         bounding_box([x_pos_corrected, y_pos_corrected], :width => 100) do
           text "x"
         end
@@ -273,7 +288,7 @@ module Generators::Reports
       end
 
 
-      if !@void
+      if !@void_2014
         bounding_box([col2, y_pos], :width => 150) do
           text @notice.policy_id
         end
@@ -291,20 +306,19 @@ module Generators::Reports
       fill_enrollee(@notice.recipient, @responsible_party_data)
 
       move_down(12)
-      if @notice.spouse && @notice.has_aptc && !@void
+      if @notice.spouse && @notice.has_aptc && !@void_2014
         fill_enrollee(@notice.spouse)
       else
         move_down(13)
       end
       move_down(11)
       y_pos = cursor
-
       bounding_box([col1, y_pos], :width => 100) do
-        text @notice.recipient.coverage_start_date unless @void
+        text @notice.recipient.coverage_start_date unless @void_2014
       end
 
       bounding_box([col2, y_pos], :width => 100) do
-        text @notice.recipient.coverage_termination_date.to_s unless @void
+        text @notice.recipient.coverage_termination_date.to_s unless @void_2014
       end
 
       bounding_box([col3, y_pos], :width => 250) do
@@ -399,18 +413,18 @@ module Generators::Reports
         monthly_premium = @notice.monthly_premiums.detect{|p| p.serial == index}
         monthly_premium = nil if monthly_premium.present? && monthly_premium.premium_amount.nil?
 
-        if monthly_premium || @void
+        if monthly_premium || @void_2014
           bounding_box([col1, y_pos], :width => 100) do
-            text number_to_currency((@void || @catastrophic_corrected) ? 0.0 : monthly_premium.premium_amount), :align => :right
+            text number_to_currency((@void_2014 || @catastrophic_corrected) ? 0.0 : monthly_premium.premium_amount), :align => :right
           end
 
-          if @void || (monthly_premium.monthly_aptc.present? && monthly_premium.monthly_aptc.to_f > 0)
+          if @void_2014 || (monthly_premium.monthly_aptc.present? && monthly_premium.monthly_aptc.to_f > 0)
             bounding_box([col2, y_pos], :width => 130) do
-              text number_to_currency((@void || @catastrophic_corrected) ? 0.0 : monthly_premium.premium_amount_slcsp), :align => :right
+              text number_to_currency((@void_2014 || @catastrophic_corrected) ? 0.0 : monthly_premium.premium_amount_slcsp), :align => :right
             end
 
             bounding_box([col3, y_pos], :width => 120) do
-              text number_to_currency(@void ? 0.0 : monthly_premium.monthly_aptc), :align => :right
+              text number_to_currency(@void_2014 ? 0.0 : monthly_premium.monthly_aptc), :align => :right
             end
           end
         end
@@ -418,16 +432,16 @@ module Generators::Reports
       end
 
       bounding_box([col1, y_pos], :width => 100) do
-        text number_to_currency((@void || @catastrophic_corrected) ? 0.0 : @notice.yearly_premium.premium_amount), :align => :right
+        text number_to_currency((@void_2014 || @catastrophic_corrected) ? 0.0 : @notice.yearly_premium.premium_amount), :align => :right
       end
 
-      if @void || @notice.yearly_premium.aptc_amount.present?
+      if @void_2014 || @notice.yearly_premium.aptc_amount.present?
         bounding_box([col2, y_pos], :width => 130) do
-          text number_to_currency((@void || @catastrophic_corrected) ? 0.0 : @notice.yearly_premium.slcsp_premium_amount), :align => :right
+          text number_to_currency((@void_2014 || @catastrophic_corrected) ? 0.0 : @notice.yearly_premium.slcsp_premium_amount), :align => :right
         end
   
         bounding_box([col3, y_pos], :width => 120) do
-          text number_to_currency(@void ? 0.0 : @notice.yearly_premium.aptc_amount), :align => :right
+          text number_to_currency(@void_2014 ? 0.0 : @notice.yearly_premium.aptc_amount), :align => :right
         end
       end
     end
@@ -443,6 +457,16 @@ module Generators::Reports
       ssn = number_to_ssn(ssn)
       last_digits = ssn.match(/\d{4}$/)[0]
       "***-**-#{last_digits}"
+    end
+
+    def set_positions(y_position, padding)
+      canceled_policies = @notice.canceled_policies.split(',')
+      print_policies(canceled_policies, 18, y_position+padding)
+      if @notice.active_policies.present?
+        active_policies = @notice.active_policies.split(',')
+        y_ps = (@void && @calender_year >= 2019) ? 125+padding : 130+padding
+        print_policies(active_policies, 18, y_ps)
+      end
     end
   end
 end

@@ -5,8 +5,10 @@ describe ExternalEvents::ExternalPolicyMemberDrop, "given:
 - an IVL policy cv
 - a list of dropped member ids
 " do
-  let(:existing_policy) { instance_double(Policy) }
-  let(:dropped_member_ids) { [] }
+  let(:dependent_id) { "ABCDEFG" }
+  let(:existing_policy_id) { "SOME POLICY ID" }
+  let(:existing_policy) { instance_double(Policy, :_id => existing_policy_id, :enrollees => [], :is_shop? => false) }
+  let(:dropped_member_ids) { [dependent_id] }
 
   let(:shop_market) { nil }
   let(:individual_market) { instance_double(::Openhbx::Cv2::PolicyEnrollmentIndividualMarket, applied_aptc_amount: aptc_string_value) }
@@ -16,7 +18,25 @@ describe ExternalEvents::ExternalPolicyMemberDrop, "given:
                                             premium_total_amount: premium_total_string_value,
                                             total_responsible_amount: tot_res_amt_string_value
                                            ) }
-  let(:policy_cv) { instance_double(::Openhbx::Cv2::Policy, :policy_enrollment => policy_enrollment) }
+  let(:policy_cv) do
+    instance_double(
+      ::Openhbx::Cv2::Policy,
+      :policy_enrollment => policy_enrollment,
+      :enrollees => [dropped_enrollee]
+    )
+  end
+
+  let(:benefit_node) { instance_double(Openhbx::Cv2::EnrolleeBenefit, :end_date => end_date) }
+  let(:member_node) { instance_double(Openhbx::Cv2::EnrolleeMember, :id => dependent_id) }
+  let(:dropped_enrollee) do
+    instance_double(
+      Openhbx::Cv2::Enrollee,
+      :member => member_node,
+      :benefit => benefit_node
+    )
+  end
+
+  let(:end_date) { "20150531" }
 
   let(:premium_total_string_value) { "456.78" }
   let(:premium_total_bigdecimal_value) { BigDecimal.new(premium_total_string_value) }
@@ -94,6 +114,42 @@ describe ExternalEvents::ExternalPolicyMemberDrop, "given:
       expect(subject.extract_tot_res_amt).to eq(other_tot_res_amt_bigdecimal_value)
     end
   end
+
+  describe "asked to persist a termination on an IVL policy" do
+
+    before :each do
+      allow(Policy).to receive(:find).with(existing_policy_id).and_return(existing_policy)
+      allow(existing_policy).to receive(:update_attributes!).with(
+        :pre_amt_tot => premium_total_bigdecimal_value,
+        :tot_res_amt => tot_res_amt_bigdecimal_value,
+        :applied_aptc => aptc_bigdecimal_value
+      ).and_return(true)
+    end
+
+    it "notifies" do
+      expect(Observers::PolicyUpdated).to receive(:notify).with(existing_policy)
+      subject.persist
+    end
+  end
+
+  describe "asked to persist a termination on an IVL policy with a 12/31 end date" do
+
+    let(:end_date) { "20151231" }
+
+    before :each do
+      allow(Policy).to receive(:find).with(existing_policy_id).and_return(existing_policy)
+      allow(existing_policy).to receive(:update_attributes!).with(
+        :pre_amt_tot => premium_total_bigdecimal_value,
+        :tot_res_amt => tot_res_amt_bigdecimal_value,
+        :applied_aptc => aptc_bigdecimal_value
+      ).and_return(true)
+    end
+
+    it "doesn't notify" do
+      expect(Observers::PolicyUpdated).not_to receive(:notify).with(existing_policy)
+      subject.persist
+    end
+  end
 end
 
 describe ExternalEvents::ExternalPolicyMemberDrop, "given:
@@ -101,7 +157,8 @@ describe ExternalEvents::ExternalPolicyMemberDrop, "given:
 - a SHOP policy cv
 - a list of dropped member ids
 " do
-  let(:existing_policy) { instance_double(Policy) }
+  let(:existing_policy_id) { "SOME POLICY ID" }
+  let(:existing_policy) { instance_double(Policy, :_id => existing_policy_id) }
   let(:dropped_member_ids) { [] }
 
   let(:individual_market) { nil }

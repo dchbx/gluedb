@@ -18,11 +18,19 @@ module PeopleHelper
   end
 
   def policy_sponsor(policy)
-    policy_market(policy) == "Individual" ? "Individual" : raw(link_to truncate(policy_market(policy), length: 35), employer_path(policy.employer))
+    if policy.kind == "coverall"
+      "Coverall"
+    else
+      policy_market(policy) == "Individual" ? "Individual" : raw(link_to truncate(policy_market(policy), length: 35), employer_path(policy.employer))
+    end  
   end
 
   def policy_status(policy)
     status = policy.aasm_state.capitalize
+    if (policy.term_for_np == true) && (policy.aasm_state == "terminated")
+      status << " (NPT)"
+    end
+    status
     # raw(<span class="label label-warning">status</span>) if ["Canceled", "Terminated"].include?(status)
   end
 

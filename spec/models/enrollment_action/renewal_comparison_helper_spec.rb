@@ -32,6 +32,31 @@ describe EnrollmentAction::RenewalComparisonHelper do
     end
   end
 
+  describe "#carrier_requires_simple_renewal" do
+    let(:carrier) { instance_double(Carrier, :id => 1, :requires_simple_renewal? => false) }
+    let(:plan) { instance_double(Plan, :id => 1, :carrier_id => 1) }
+    let(:is_shop?) { false }
+    let(:policy_cv) { double()}
+    let(:enrollment_event) { instance_double(ExternalEvents::EnrollmentEventNotification,
+                              :existing_plan => plan,
+                              :is_shop? => is_shop?,
+                              :policy_cv => policy_cv
+                               )}
+    before :each do
+      allow(plan).to receive(:carrier).and_return(carrier)
+      allow(subject).to receive(:extract_plan).with(policy_cv).and_return(plan)
+    end
+
+    it "returns false" do
+      expect(subject.carrier_requires_simple_renewal?(enrollment_event)).to be_falsey
+    end
+
+    it "returns true" do
+      allow(carrier).to receive(:requires_simple_renewal?).and_return(true)
+      expect(subject.carrier_requires_simple_renewal?(enrollment_event)).to be_truthy
+    end
+  end
+
   describe "#same_carrier_renewal_candidates" do
     let(:is_shop?) { false }
     let(:policy_cv) { double()}

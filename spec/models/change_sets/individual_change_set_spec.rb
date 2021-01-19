@@ -5,6 +5,30 @@ describe ::ChangeSets::IndividualChangeSet do
 
   let(:changeset) { ::ChangeSets::IndividualChangeSet.new(remote_resource) }
   context "with a record that already exists" do
+
+    describe "#notify_report_eligible_policies" do
+      let(:member_id) { "SOME MEMBER ID" }
+      let(:remote_resource_exists) { true }
+      let(:changed_policy) { instance_double(Policy, canceled?: false) }
+      let(:existing_record) do
+        Person.new(:members => [member])
+      end
+      let(:member) do
+        Member.new(:hbx_member_id => member_id)
+      end
+      let(:member_policies) { [changed_policy] }
+
+      before :each do
+        allow(remote_resource).to receive(:hbx_member_id).and_return(member_id)
+        allow(member).to receive(:policies).and_return(member_policies)
+      end
+ 
+      it "notifies the affected policies" do
+        expect(Observers::PolicyUpdated).to receive(:notify).with(changed_policy)
+        changeset.notify_report_eligible_policies
+      end
+    end
+
     describe "#individual_exists?" do
       let(:remote_resource_exists) { false }
       let(:existing_record) { nil }

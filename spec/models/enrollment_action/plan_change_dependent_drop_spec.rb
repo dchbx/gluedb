@@ -91,12 +91,13 @@ describe EnrollmentAction::PlanChangeDependentDrop, "given a valid enrollment se
   let(:secondary_member) { instance_double(Openhbx::Cv2::EnrolleeMember, id: 2) }
   let(:dropped_member) { instance_double(Openhbx::Cv2::EnrolleeMember, id: 3) }
   let(:primary_enrollee) { instance_double(Openhbx::Cv2::Enrollee, member: primary_member) }
+  let(:carrier) { instance_double(Carrier, :plan_change_renewal_dependent_drop_transmitted_as_renewal => true) }
   let(:secondary_enrollee) { instance_double(Openhbx::Cv2::Enrollee, member: primary_member) }
   let(:dropped_enrollee) { instance_double(Openhbx::Cv2::Enrollee, member: primary_member) }
   let(:terminated_policy_cv) { instance_double(Openhbx::Cv2::Policy, enrollees: [primary_enrollee, secondary_enrollee, dropped_enrollee])}
   let(:new_policy_cv) { instance_double(Openhbx::Cv2::Policy, enrollees: [primary_enrollee, secondary_enrollee]) }
-  let(:plan) { instance_double(Plan, id: 1) }
-  let(:policy) { instance_double(Policy, hbx_enrollment_ids: [1, 2, 3]) }
+  let(:plan) { instance_double(Plan, id: 1, carrier: carrier) }
+  let(:policy) { instance_double(Policy, hbx_enrollment_ids: [1, 2, 3], carrier: carrier) }
   let(:db_record) { instance_double(ExternalEvents::ExternalMember, persist: true) }
   let(:dependent_drop_event) { instance_double(
     ::ExternalEvents::EnrollmentEventNotification,
@@ -114,6 +115,7 @@ describe EnrollmentAction::PlanChangeDependentDrop, "given a valid enrollment se
   ) }
   let(:policy_updater) { instance_double(ExternalEvents::ExternalPolicyMemberDrop) }
   let(:expected_termination_date) { double }
+  let(:active_policy) { instance_double(Policy) }
 
   subject { EnrollmentAction::PlanChangeDependentDrop.new(termination_event, dependent_drop_event) }
 
@@ -121,12 +123,22 @@ describe EnrollmentAction::PlanChangeDependentDrop, "given a valid enrollment se
     allow(ExternalEvents::ExternalMember).to receive(:new).with(primary_member).and_return(db_record)
     allow(ExternalEvents::ExternalMember).to receive(:new).with(secondary_member).and_return(db_record)
     allow(ExternalEvents::ExternalMember).to receive(:new).with(dropped_member).and_return(db_record)
-    allow(ExternalEvents::ExternalPolicy).to receive(:new).with(new_policy_cv, plan, false).and_return(policy_updater)
+    allow(ExternalEvents::ExternalPolicy).to receive(:new).with(new_policy_cv, plan, false, market_from_payload: subject.action).and_return(policy_updater)
     allow(policy_updater).to receive(:persist).and_return(true)
     allow(termination_event).to receive(:subscriber_end).and_return(false)
     allow(termination_event.existing_policy).to receive(:terminate_as_of).and_return(true)
     allow(subject.action).to receive(:existing_policy).and_return(false)
     allow(subject).to receive(:select_termination_date).and_return(expected_termination_date)
+    allow(subject.action).to receive(:kind).and_return(dependent_drop_event)
+    allow(subject.action).to receive(:existing_plan).and_return(plan)
+    allow(Observers::PolicyUpdated).to receive(:notify).with(policy)
+    allow(subject).to receive(:same_carrier_renewal_candidates).with(dependent_drop_event).and_return([active_policy])
+    allow(dependent_drop_event).to receive(:plan_change_dep_add_or_drop_to_renewal_policy?).with(active_policy, policy).and_return(false)
+  end
+
+  it "notifies of the termination" do
+    expect(Observers::PolicyUpdated).to receive(:notify).with(policy)
+    subject.persist
   end
 
   it "persists when all members persist" do
@@ -239,6 +251,12 @@ describe EnrollmentAction::PlanChangeDependentDrop, "given a valid enrollment" d
 
   it "publishes change_product event xml to edi" do
     expect(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, dependent_drop_event.hbx_enrollment_id, dependent_drop_event.employer_hbx_id)
+    subject.publish
+  end
+
+  it "publishes an auto renew event for drop dependents on renewal policy " do
+    subject.plan_change_dep_drop_from_renewal = true
+    expect(action_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#auto_renew")
     subject.publish
   end
 end

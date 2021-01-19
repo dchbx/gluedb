@@ -147,17 +147,18 @@ class ExcelReportBuilder
     sheet.row(index).concat columns
 
 
-      book = Spreadsheet.open "#{Rails.root}/2017_RP_AQHP_1095A_Data.xls"
+      book = Spreadsheet.open "#{Rails.root}/2017_RP_UQHP_1095A_Data.xls"
       @responsible_party_data = book.worksheets.first.inject({}) do |data, row|
         if row[2].to_s.strip.match(/Responsible Party SSN/i) || (row[2].to_s.strip.blank? && row[4].to_s.strip.blank?)
         else
-          data[row[0].to_s.strip.to_i] = [prepend_zeros(row[2].to_i.to_s, 9), Date.strptime(row[3].to_s.strip, "%m-%d-%Y")]
+          data[row[0].to_s.strip.to_i] = [prepend_zeros(row[2].to_i.to_s, 9), Date.strptime(row[3].to_s.strip.split("T")[0], "%Y-%m-%d")]
         end
         data
       end
 
+
       @npt_policies = []
-      CSV.foreach("#{Rails.root}/2017_NPT_AQHP_20180116.csv", headers: :true) do |row|
+      CSV.foreach("#{Rails.root}/2017_NPT_UQHP_20180126.csv", headers: :true) do |row|
         @npt_policies << row[0].strip
       end
 
@@ -217,11 +218,13 @@ class ExcelReportBuilder
             next
           end
 
+          next if policy.kind == 'coverall'
+
           if policy.multi_aptc?
             multi_aptc << policy.id
           end
 
-          next unless (policy.applied_aptc > 0 || policy.multi_aptc?)
+          next if (policy.applied_aptc > 0 || policy.multi_aptc?)
 
           # if skip_list.include?(policy.id)
           #   puts "skipped....#{policy.id}"
@@ -291,7 +294,7 @@ class ExcelReportBuilder
     puts multi_aptc.inspect
     # puts non_authority.inspect
 
-    workbook.write "#{Rails.root.to_s}/IVL_AQHP_1095A_#{Time.now.strftime("%m_%d_%Y_%H_%M")}.xls"
+    workbook.write "#{Rails.root.to_s}/IVL_UQHP_1095A_#{Time.now.strftime("%m_%d_%Y_%H_%M")}.xls"
   end
 
   def append_covered_member(indiv)
@@ -343,10 +346,15 @@ class ExcelReportBuilder
 
     p_repo = {}
 
-    p_map = Person.collection.aggregate([{"$unwind"=> "$members"}, {"$project" => {"_id" => 0, member_id: "$members.hbx_member_id", person_id: "$_id"}}])
+    #p_map = Person.collection.aggregate([{"$unwind"=> "$members"}, {"$project" => {"_id" => 0, member_id: "$members.hbx_member_id", person_id: "$_id"}}])
 
-    p_map.each do |val|
-      p_repo[val["member_id"]] = val["person_id"]
+    Person.each do |person|
+      person.members.each do |member|
+        # p_map.each do |val|
+
+          p_repo[member.hbx_member_id] = person._id
+        # end
+      end
     end
 
     pols = PolicyStatus::Active.between(Date.new(2016,12,31), Date.new(2017,12,31)).results.where({

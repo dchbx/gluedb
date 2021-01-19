@@ -81,12 +81,19 @@ describe EnrollmentAction::PlanChange, "given an enrollment event set that:
   before :each do
     allow(ExternalEvents::ExternalMember).to receive(:new).with(member_primary).
       and_return(primary_db_record)
-    allow(ExternalEvents::ExternalPolicy).to receive(:new).with(new_policy_cv, new_plan, false).
+    allow(ExternalEvents::ExternalPolicy).to receive(:new).with(new_policy_cv, new_plan, false, market_from_payload: subject.action).
       and_return(policy_updater)
     allow(policy).to receive(:terminate_as_of).with(termination_date).
       and_return(true)
     allow(policy_updater).to receive(:persist).and_return(true)
     allow(subject.action).to receive(:existing_policy).and_return(false)
+    allow(subject.action).to receive(:kind).and_return(plan_change_event)
+    allow(Observers::PolicyUpdated).to receive(:notify).with(policy)
+  end
+
+  it "notifies of the termination" do
+    expect(Observers::PolicyUpdated).to receive(:notify).with(policy)
+    subject.persist
   end
 
   it "persists the change" do
@@ -97,7 +104,8 @@ end
 describe EnrollmentAction::PlanChange, "given an enrollment event set that:
 --  provides a new plan id
 --  with no dependents changed
---  with no carrier change" do
+--  with no carrier change
+--  is shop" do
 
   let(:amqp_connection) { double }
   let(:event_xml) { double }
@@ -112,7 +120,8 @@ describe EnrollmentAction::PlanChange, "given an enrollment event set that:
     :event_responder => event_responder,
     :event_xml => event_xml,
     :employer_hbx_id => 1,
-    :hbx_enrollment_id => 1
+    :hbx_enrollment_id => 1,
+    :is_shop? => true
     ) }
 
   subject { EnrollmentAction::PlanChange.new(nil, plan_change_event) }
@@ -130,6 +139,313 @@ describe EnrollmentAction::PlanChange, "given an enrollment event set that:
   it "publishes an event of type change_product" do
     expect(action_publish_helper).to receive(:set_event_action).
       with("urn:openhbx:terms:v1:enrollment#change_product").and_return(true)
+    subject.publish
+  end
+
+  it "clears member end dates" do
+    expect(action_publish_helper).to receive(:keep_member_ends).with([]).and_return(true)
+    subject.publish
+  end
+
+  it "publishes the xml to edi" do
+    expect(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, 1, 1).
+      and_return(true)
+    subject.publish
+  end
+end
+
+
+describe EnrollmentAction::PlanChange, "given an enrollment event set that:
+--  provides a new plan id
+--  with no dependents changed
+--  with no carrier change
+--  is not shop
+--  has no renewal candidates" do
+
+  let(:amqp_connection) { double }
+  let(:event_xml) { double }
+  let(:event_responder) { instance_double(::ExternalEvents::EventResponder, :connection => amqp_connection) }
+  let(:action_helper_result_xml) { double }
+  let(:action_publish_helper) { instance_double(
+    EnrollmentAction::ActionPublishHelper,
+    :to_xml => action_helper_result_xml
+    ) }
+  let(:plan_change_event) { instance_double(
+    ::ExternalEvents::EnrollmentEventNotification,
+    :event_responder => event_responder,
+    :event_xml => event_xml,
+    :employer_hbx_id => 1,
+    :hbx_enrollment_id => 1,
+    :is_shop? => false
+    ) }
+
+  subject { EnrollmentAction::PlanChange.new(nil, plan_change_event) }
+
+  before :each do
+    allow(EnrollmentAction::ActionPublishHelper).to receive(:new).with(event_xml).
+      and_return(action_publish_helper)
+    allow(action_publish_helper).to receive(:set_event_action).
+      with("urn:openhbx:terms:v1:enrollment#change_product").
+      and_return(true)
+    allow(action_publish_helper).to receive(:keep_member_ends).with([]).and_return(true)
+    allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, plan_change_event.hbx_enrollment_id, plan_change_event.employer_hbx_id)
+    allow(subject).to receive(:same_carrier_renewal_candidates).with(plan_change_event).and_return([])
+  end
+
+  it "publishes an event of type change_product" do
+    expect(action_publish_helper).to receive(:set_event_action).
+      with("urn:openhbx:terms:v1:enrollment#change_product").and_return(true)
+    subject.publish
+  end
+
+  it "clears member end dates" do
+    expect(action_publish_helper).to receive(:keep_member_ends).with([]).and_return(true)
+    subject.publish
+  end
+
+  it "publishes the xml to edi" do
+    expect(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, 1, 1).
+      and_return(true)
+    subject.publish
+  end
+end
+
+describe EnrollmentAction::PlanChange, "given an enrollment event set that:
+--  provides a new plan id
+--  with no dependents changed
+--  with no carrier change
+--  is not shop
+--  has renewal candidates
+--  is not for 1/1 of next year" do
+
+  let(:amqp_connection) { double }
+  let(:event_xml) { double }
+  let(:event_responder) { instance_double(::ExternalEvents::EventResponder, :connection => amqp_connection) }
+  let(:action_helper_result_xml) { double }
+  let(:action_publish_helper) { instance_double(
+    EnrollmentAction::ActionPublishHelper,
+    :to_xml => action_helper_result_xml
+    ) }
+  let(:plan_change_event) { instance_double(
+    ::ExternalEvents::EnrollmentEventNotification,
+    :event_responder => event_responder,
+    :event_xml => event_xml,
+    :employer_hbx_id => 1,
+    :hbx_enrollment_id => 1,
+    :is_shop? => false
+    ) }
+
+  let(:now_time) do
+    instance_double(
+      Time,
+      {
+        year: 2018,
+        month: 12,
+        day: 15
+      }
+    )
+  end
+
+  let(:subscriber_start) do
+    instance_double(
+      Date,
+      {
+        year: 2018,
+        month: 1,
+        day: 1
+      }
+    )
+  end
+
+  let(:subscriber) { double }
+
+  subject { EnrollmentAction::PlanChange.new(nil, plan_change_event) }
+
+  before :each do
+    allow(EnrollmentAction::ActionPublishHelper).to receive(:new).with(event_xml).
+      and_return(action_publish_helper)
+    allow(action_publish_helper).to receive(:set_event_action).
+      with("urn:openhbx:terms:v1:enrollment#change_product").
+      and_return(true)
+    allow(action_publish_helper).to receive(:keep_member_ends).with([]).and_return(true)
+    allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, plan_change_event.hbx_enrollment_id, plan_change_event.employer_hbx_id)
+    allow(subject).to receive(:same_carrier_renewal_candidates).with(plan_change_event).and_return([1])
+    allow(Time).to receive(:now).and_return(now_time)
+    allow(plan_change_event).to receive(:subscriber).and_return(subscriber)
+    allow(subject).to receive(:extract_enrollee_start).with(subscriber).and_return(subscriber_start)
+  end
+
+  it "publishes an event of type change_product" do
+    expect(action_publish_helper).to receive(:set_event_action).
+      with("urn:openhbx:terms:v1:enrollment#change_product").and_return(true)
+    subject.publish
+  end
+
+  it "clears member end dates" do
+    expect(action_publish_helper).to receive(:keep_member_ends).with([]).and_return(true)
+    subject.publish
+  end
+
+  it "publishes the xml to edi" do
+    expect(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, 1, 1).
+      and_return(true)
+    subject.publish
+  end
+end
+
+describe EnrollmentAction::PlanChange, "given an enrollment event set that:
+--  provides a new plan id
+--  with no dependents changed
+--  with no carrier change
+--  is not shop
+--  has renewal candidates
+--  is for 1/1 of next year
+--  today is after 12/20" do
+
+  let(:amqp_connection) { double }
+  let(:event_xml) { double }
+  let(:event_responder) { instance_double(::ExternalEvents::EventResponder, :connection => amqp_connection) }
+  let(:action_helper_result_xml) { double }
+  let(:action_publish_helper) { instance_double(
+    EnrollmentAction::ActionPublishHelper,
+    :to_xml => action_helper_result_xml
+    ) }
+  let(:plan_change_event) { instance_double(
+    ::ExternalEvents::EnrollmentEventNotification,
+    :event_responder => event_responder,
+    :event_xml => event_xml,
+    :employer_hbx_id => 1,
+    :hbx_enrollment_id => 1,
+    :is_shop? => false
+    ) }
+
+  let(:now_time) do
+    instance_double(
+      Time,
+      {
+        year: 2018,
+        month: 12,
+        day: 21
+      }
+    )
+  end
+
+  let(:subscriber_start) do
+    instance_double(
+      Date,
+      {
+        year: 2019,
+        month: 1,
+        day: 1
+      }
+    )
+  end
+
+  let(:subscriber) { double }
+
+  subject { EnrollmentAction::PlanChange.new(nil, plan_change_event) }
+
+  before :each do
+    allow(EnrollmentAction::ActionPublishHelper).to receive(:new).with(event_xml).
+      and_return(action_publish_helper)
+    allow(action_publish_helper).to receive(:set_event_action).
+      with("urn:openhbx:terms:v1:enrollment#change_product").
+      and_return(true)
+    allow(action_publish_helper).to receive(:keep_member_ends).with([]).and_return(true)
+    allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, plan_change_event.hbx_enrollment_id, plan_change_event.employer_hbx_id)
+    allow(subject).to receive(:same_carrier_renewal_candidates).with(plan_change_event).and_return([1])
+    allow(Time).to receive(:now).and_return(now_time)
+    allow(plan_change_event).to receive(:subscriber).and_return(subscriber)
+    allow(subject).to receive(:extract_enrollee_start).with(subscriber).and_return(subscriber_start)
+  end
+
+  it "publishes an event of type change_product" do
+    expect(action_publish_helper).to receive(:set_event_action).
+      with("urn:openhbx:terms:v1:enrollment#change_product").and_return(true)
+    subject.publish
+  end
+
+  it "clears member end dates" do
+    expect(action_publish_helper).to receive(:keep_member_ends).with([]).and_return(true)
+    subject.publish
+  end
+
+  it "publishes the xml to edi" do
+    expect(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, 1, 1).
+      and_return(true)
+    subject.publish
+  end
+end
+
+describe EnrollmentAction::PlanChange, "given an enrollment event set that:
+--  provides a new plan id
+--  with no dependents changed
+--  with no carrier change
+--  is not shop
+--  has renewal candidates
+--  is for 1/1 of next year
+--  today is 12/20" do
+
+  let(:amqp_connection) { double }
+  let(:event_xml) { double }
+  let(:event_responder) { instance_double(::ExternalEvents::EventResponder, :connection => amqp_connection) }
+  let(:action_helper_result_xml) { double }
+  let(:action_publish_helper) { instance_double(
+    EnrollmentAction::ActionPublishHelper,
+    :to_xml => action_helper_result_xml
+    ) }
+  let(:plan_change_event) { instance_double(
+    ::ExternalEvents::EnrollmentEventNotification,
+    :event_responder => event_responder,
+    :event_xml => event_xml,
+    :employer_hbx_id => 1,
+    :hbx_enrollment_id => 1,
+    :is_shop? => false
+    ) }
+
+  let(:now_time) do
+    instance_double(
+      Time,
+      {
+        year: 2018,
+        month: 12,
+        day: 20
+      }
+    )
+  end
+
+  let(:subscriber_start) do
+    instance_double(
+      Date,
+      {
+        year: 2019,
+        month: 1,
+        day: 1
+      }
+    )
+  end
+
+  let(:subscriber) { double }
+
+  subject { EnrollmentAction::PlanChange.new(nil, plan_change_event) }
+
+  before :each do
+    allow(EnrollmentAction::ActionPublishHelper).to receive(:new).with(event_xml).
+      and_return(action_publish_helper)
+    allow(action_publish_helper).to receive(:set_event_action).
+      with("urn:openhbx:terms:v1:enrollment#active_renew").
+      and_return(true)
+    allow(action_publish_helper).to receive(:keep_member_ends).with([]).and_return(true)
+    allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, plan_change_event.hbx_enrollment_id, plan_change_event.employer_hbx_id)
+    allow(subject).to receive(:same_carrier_renewal_candidates).with(plan_change_event).and_return([1])
+    allow(Time).to receive(:now).and_return(now_time)
+    allow(plan_change_event).to receive(:subscriber).and_return(subscriber)
+    allow(subject).to receive(:extract_enrollee_start).with(subscriber).and_return(subscriber_start)
+  end
+
+  it "publishes an event of type active_renew" do
+    expect(action_publish_helper).to receive(:set_event_action).
+      with("urn:openhbx:terms:v1:enrollment#active_renew").and_return(true)
     subject.publish
   end
 

@@ -61,7 +61,6 @@ module Parsers
         isa = top_doc["ISA"]
         gs = top_doc["GS"]
         sender_id = isa[6].strip
-        @carrier = @import_cache.lookup_carrier_fein(sender_id)
         Protocols::X12::Transmission.create!({
           :isa06 => sender_id,
           :isa08 => isa[8].strip,
@@ -87,7 +86,6 @@ module Parsers
 
         # Carrier
         carrier = @import_cache.lookup_carrier_fein(etf.carrier_fein)
-        carrier ||= @carrier
 
         # Employer
         employer = nil
@@ -154,7 +152,7 @@ module Parsers
       # FIXME: pull sep reason
       def persist_policy(etf, carrier_id, plan_id, eg_id, employer_id, rp_id, broker_id)
         reporting_categories = etf.subscriber_loop.reporting_catergories
-
+        existing_policy = Policy.where(hbx_enrollment_ids: eg_id).first
         new_policy = Policy.new(
           :plan_id => plan_id,
           :enrollment_group_id => eg_id,
@@ -169,19 +167,13 @@ module Parsers
           :responsible_party_id => rp_id,
           :enrollees => []
         )
-        policy = Policy.find_or_update_policy(new_policy)
-        if transaction_set_kind(etf) == "effectuation"
-          policy.aasm_state = 'effectuated'
-        end
-
-        etf.people.each do |person_loop|
-          policy_loop = person_loop.policy_loops.first
-          enrollee = build_enrollee(person_loop, policy_loop)
-          policy.merge_enrollee(enrollee, policy_loop.action)
-        end
-        policy.save!
-
-        policy
+        Policy.update_or_create_policy_from_edi(
+          existing_policy,
+          new_policy,
+          self,
+          etf,
+          transaction_set_kind(etf)
+        )
       end
 
       def build_enrollee(person, policy)

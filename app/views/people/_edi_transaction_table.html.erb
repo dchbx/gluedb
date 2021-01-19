@@ -1,7 +1,8 @@
 <% if transactions.count < 1 %>
   <div class="row"><div class="col-md-offset-1 col-md-2"><p>None found</p></div></div>
 <% else %>
-  <table class="table ">
+  <div class="row">
+  <table class="table col-md-12">
     <thead>
       <tr>
         <th>Type</th>
@@ -18,7 +19,7 @@
       <tr>
         <td><span class="fui-export">&nbsp;</span> <%= trans.transaction_kind.humanize %></td>
         <td><%= trans_aasm_state(trans) %></td>
-        <td><%= trans.submitted_at.to_date %></td>
+        <td><%= trans.submitted_at.try(:strftime, "%m/%d/%Y") %></td>
         <td><%= trans.ack_nak_processed_at.to_date unless trans.ack_nak_processed_at.blank? %></td>
         <td>
           <% if can? :read, current_user %>
@@ -35,4 +36,5 @@
       <% end %>
     </tbody>
   </table>
+  </div>
 <% end %>

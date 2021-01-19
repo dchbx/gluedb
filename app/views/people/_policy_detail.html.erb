@@ -19,12 +19,12 @@
 		  <dt>Sponsor</dt>
 		  <dd><%= policy_sponsor(p) %></dd>
 		  <dt>Status</dt>
-		  <dd><%= p.aasm_state.capitalize %></dd>
-		  <%if can? :edit, @people %>
+      <dd><%= policy_status(p) %></dd>
+		  <%if can? :read, Policy %>
 		  		<% ben_statuses = [] %>
 		  		<% p.enrollees.each do |enrollee| %>
 		  				<% ben_statuses.push(enrollee.ben_stat.upcase) %>
-		  		<% end %> 
+		  		<% end %>
 		  		<% ben_statuses.uniq! %>
 		  		<% if ben_statuses.any? {|ben_stat| ben_stat != "ACTIVE" } %>
 		  		<dt>Benefit Status</dt>
@@ -33,6 +33,7 @@
 		  <% end %>
 			<% if (policy_market(p) == "Individual") %>
 			  <dt>Carrier to Bill?</dt>
+        <%# Individual is always set to yes for carrier to bill %>
 			  <dd><%= boolean_to_human(p.carrier_to_bill) %></dd>
 			  <%# if p.csr_amt %>
 				  <dt>CSR percent</dt>
@@ -82,10 +83,31 @@
 <h6>Enrollment Group</h6>
 <%= render 'enrollment_detail', policy: p %>
 
-<h6>EDI Transactions</h6>
-<% t = p.transaction_list %>
-<%= render 'edi_transaction_table', transactions: t %>
+  <!-- Transaction pills -->
+  <ul class="nav nav-tabs nav-justified" role="tablist">
+    <li class="nav-item active">
+      <a class="nav-link nav-link-color" id="edi-transactions-tab-policy-<%= p.id.to_s %>" data-toggle="tab" role="tab" aria-controls="edi-transactions-<%= p.id.to_s %>" href="#edi_transactions_list_<%= p.id.to_s %>" aria-selected="true">EDI Transactions</a>
+    </li>
+    <% if policy_market(p) != "Individual" %>
+      <li class="nav-item">
+        <a class="nav-link nav-link-color" id="payment-processor-transactions-tab-<%= p.id.to_s %>" data-toggle="tab" role="tab" aria-controls="payment-processor-transactions-<%= p.id.to_s %>" href="#payment_processor_transactions_list_<%= p.id.to_s %>" aria-selected="false">Payment Processor Transactions</a>
+      </li>
+    <% end %>
+  </ul>
 
+  <!-- Tab panes -->
+  <div class="tab-content tab-content-bordered">
+    <div id="edi_transactions_list_<%= p.id.to_s %>" role="tabpanel" aria-labelledby="edi-transactions-tab-<%= p.id.to_s %>" class="container-fluid tab-pane active"><br>
+      <% t = p.transaction_list %>
+      <%= render 'edi_transaction_table', transactions: t %>
+    </div>
+    <% if policy_market(p) != "Individual" %>
+      <div id="payment_processor_transactions_list_<%= p.id.to_s %>" role="tabpanel" aria-controls="payment-processor-transactions-tab-<%= p.id.to_s %>" class="container tab-pane fade"><br>
+        <% legacy_cv_transactions = p.legacy_cv_transactions.sort_by(&:submitted_at).reverse %>
+        <%= render 'legacy_cv_transaction_table', transactions: legacy_cv_transactions %>
+      </div>
+    <% end %>
+  </div>
 
 <% if can? :read, :all %>
   <h6>Premium Payments</h6>

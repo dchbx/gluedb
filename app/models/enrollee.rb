@@ -34,7 +34,7 @@ class Enrollee
   field :coverage_end, type: Date
   field :coverage_status, type: String, default: "active"
 
-  embedded_in :policy
+  embedded_in :policy, :inverse_of => :enrollees
 
   validates_presence_of :m_id, :relationship_status_code
 

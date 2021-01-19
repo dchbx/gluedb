@@ -156,8 +156,6 @@ class Household
     # Comment out following checks for RENEWALS
     return false unless pol.plan.coverage_type =~ /health/i
     return false if pol.plan.metal_level =~ /catastrophic/i
-    #   return false unless [52428, 52918, 55598, 53303, 55577].include?(pol.id)
-    # end
 
     true
   end

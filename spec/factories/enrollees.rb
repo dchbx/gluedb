@@ -22,6 +22,6 @@ FactoryGirl.define do
     end
 
     factory :subscriber_enrollee, traits: [:self_relationship]
-    factory :cancelled_enrollee, traits: [:canceled_dependent]
+    factory :cancelled_enrollee,  traits: [:canceled_dependent]
   end
 end

@@ -43,7 +43,9 @@ module ExternalEvents
         :aasm_state => "submitted"
       })
       @existing_policy.hbx_enrollment_ids << extract_enrollment_group_id(@policy_node)
-      @existing_policy.save!
+      result = @existing_policy.save!
+      Observers::PolicyUpdated.notify(@existing_policy)
+      result
     end
 
     def update_enrollee(enrollee_node)
@@ -59,10 +61,10 @@ module ExternalEvents
     end
 
     def persist
-      update_policy_information
       @policy_node.enrollees.each do |en|
         update_enrollee(en)
       end
+      update_policy_information
       true
     end
   end

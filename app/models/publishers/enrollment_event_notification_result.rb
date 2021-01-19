@@ -152,7 +152,7 @@ module Publishers
         "persist_failed",
         headers.merge({
           "return_status" => "500",
-          "action" => action_name
+          "action_name" => action_name
         }).merge(publish_errors),
         {
           :batch_id => batch_id,
@@ -181,7 +181,7 @@ module Publishers
         "publish_failed",
         headers.merge({
           "return_status" => "500",
-          "action" => action_name
+          "action_name" => action_name
         }).merge(publish_errors),
         {
           :batch_id => batch_id,

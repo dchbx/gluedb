@@ -43,6 +43,13 @@ describe ExternalEvents::ExternalPolicyAssistanceChange, "given:
 
   before :each do
     allow(policy).to receive(:save!).and_return(true)
+    allow(policy).to receive(:set_aptc_effective_on).with(effective_aptc_date, aptc_amount, pre_amt_tot, tot_res_amt).and_return(true)
+    allow(Observers::PolicyUpdated).to receive(:notify).with(policy)
+  end
+
+  it "notifies of the assistance change" do
+    expect(Observers::PolicyUpdated).to receive(:notify).with(policy)
+    subject.persist
   end
 
   it "updates the aptc" do

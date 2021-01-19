@@ -19,7 +19,7 @@ while offset < policy_count
     Policy.offset(offset).limit(batch_size).each do |policy|
     begin
       next if policy.nil?
-      next if policy.policy_start < Date.new(2016, 01, 01)
+      next if policy.policy_start < Date.new( Date.today.year, 01, 01)
       # next if !policy.is_active?
       next if (policy.plan.metal_level == "catastrophic") ||
           (policy.applied_aptc != 0) || (policy.plan.market_type == 'shop')

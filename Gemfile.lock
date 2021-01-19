@@ -1,5 +1,5 @@
 GIT
-  remote: git@github.com:dchbx/designmodo-flatuipro-rails.git
+  remote: https://github.com/dchbx/designmodo-flatuipro-rails.git
   revision: cf4e651a49bb3ba712efd90531d864a294616914
   specs:
     designmodo-flatuipro-rails (1.3.0.0.branch)
@@ -8,8 +8,8 @@ GIT
       less-rails-bootstrap (>= 3.2.0)
 
 GIT
-  remote: git@github.com:dchbx/edi_codec.git
-  revision: 448f0183f6fe7da0de2c39b3e25a5c00188f137e
+  remote: https://github.com/dchbx/edi_codec.git
+  revision: bbd593e0312c7e9992bc0491d5bf7ce56ef61f7a
   specs:
     edi_codec (0.1.2)
       activesupport (>= 3.2)
@@ -17,7 +17,7 @@ GIT
 
 GIT
   remote: https://github.com/dchbx/openhbx_cv2.git
-  revision: d9c7f60eb789d7eee7719302875b77ad93d774d2
+  revision: b2b71b74190f75c23098634fe609dbd6a14050e7
   specs:
     openhbx_cv2 (0.0.1)
       activesupport (>= 3.2)
@@ -32,7 +32,7 @@ GIT
 GEM
   remote: https://rubygems.org/
   specs:
-    Ascii85 (1.0.2)
+    Ascii85 (1.0.3)
     aasm (3.0.26)
     actionmailer (3.2.22.5)
       actionpack (= 3.2.22.5)
@@ -61,8 +61,6 @@ GEM
     activesupport (3.2.22.5)
       i18n (~> 0.6, >= 0.6.4)
       multi_json (~> 1.0)
-    addressable (2.5.0)
-      public_suffix (~> 2.0, >= 2.0.2)
     afm (0.2.2)
     akami (1.2.2)
       gyoku (>= 0.4.0)
@@ -70,7 +68,6 @@ GEM
     american_date (1.1.0)
     amq-protocol (2.0.1)
     arel (3.0.3)
-    ast (2.3.0)
     aws-sdk (2.2.4)
       aws-sdk-resources (= 2.2.4)
     aws-sdk-core (2.2.4)
@@ -104,9 +101,6 @@ GEM
       rack (>= 1.0.0)
       rack-test (>= 0.5.4)
       xpath (~> 2.0)
-    capybara-webkit (1.11.1)
-      capybara (>= 2.3.0, < 2.8.0)
-      json
     carrierwave (0.10.0)
       activemodel (>= 3.2.0)
       activesupport (>= 3.2.0)
@@ -125,9 +119,6 @@ GEM
       builder (>= 2.1.2)
     code_analyzer (0.4.7)
       sexp_processor
-    codeclimate-engine-rb (0.4.0)
-      virtus (~> 1.0)
-    coderay (1.1.2)
     coercible (1.0.0)
       descendants_tracker (~> 0.0.1)
     coffee-rails (3.2.2)
@@ -168,15 +159,6 @@ GEM
     factory_girl_rails (4.5.0)
       factory_girl (~> 4.5.0)
       railties (>= 3.0.0)
-    flay (2.8.1)
-      erubis (~> 2.7.0)
-      path_expander (~> 1.0)
-      ruby_parser (~> 3.0)
-      sexp_processor (~> 4.0)
-    flog (4.4.0)
-      path_expander (~> 1.0)
-      ruby_parser (~> 3.1, > 3.1.0)
-      sexp_processor (~> 4.4)
     font-awesome-rails (4.2.0.0)
       railties (>= 3.2, < 5.0)
     forkr (1.0.2)
@@ -208,8 +190,6 @@ GEM
       actionpack (>= 3.0.0)
       activesupport (>= 3.0.0)
     kgio (2.11.0)
-    launchy (2.4.3)
-      addressable (~> 2.3)
     lazy_priority_queue (0.1.1)
     less (2.5.1)
       commonjs (~> 0.2.7)
@@ -225,7 +205,6 @@ GEM
     mail (2.5.5)
       mime-types (~> 1.16)
       treetop (~> 1.4.8)
-    method_source (0.9.0)
     mime-types (1.25.1)
     mini_portile2 (2.1.0)
     mongoid (3.1.7)
@@ -263,12 +242,10 @@ GEM
     parallel (1.10.0)
     parallel_tests (2.13.0)
       parallel
-    parser (2.3.3.1)
-      ast (~> 2.2)
-    path_expander (1.0.1)
     pd_x12 (1.5.4)
       libxml-ruby
-    pdf-reader (1.4.1)
+    pdf-core (0.7.0)
+    pdf-reader (2.4.0)
       Ascii85 (~> 1.0.0)
       afm (~> 0.2.1)
       hashery (~> 2.0)
@@ -276,16 +253,13 @@ GEM
       ttfunk
     polyglot (0.3.5)
     power_assert (0.4.1)
-    prawn (0.11.1)
-      pdf-reader (>= 0.9.0)
-      ttfunk (~> 1.0.0)
-    pry (0.11.3)
-      coderay (~> 1.1.0)
-      method_source (~> 0.9.0)
-    pry-rails (0.3.6)
-      pry (>= 0.10.4)
+    prawn (2.2.2)
+      pdf-core (~> 0.7.0)
+      ttfunk (~> 1.5)
+    prawn-templates (0.1.2)
+      pdf-reader (~> 2.0)
+      prawn (~> 2.2)
     psych (2.0.5)
-    public_suffix (2.0.5)
     rack (1.4.7)
     rack-cache (1.7.1)
       rack (>= 0.4)
@@ -316,15 +290,10 @@ GEM
       rake (>= 0.8.7)
       rdoc (~> 3.4)
       thor (>= 0.14.6, < 2.0)
-    rainbow (2.2.1)
     raindrops (0.17.0)
     rake (10.4.2)
     rdoc (3.12.2)
       json (~> 1.4)
-    reek (4.5.3)
-      codeclimate-engine-rb (~> 0.4.0)
-      parser (~> 2.3.1, >= 2.3.1.2)
-      rainbow (~> 2.0)
     ref (2.0.0)
     require_all (1.4.0)
     rgl (0.5.2)
@@ -361,19 +330,8 @@ GEM
       builder (< 4)
       rspec-core (>= 2, < 4, != 2.12.0)
     ruby-ole (1.2.11.7)
-    ruby-progressbar (1.6.0)
+    ruby-progressbar (1.10.0)
     ruby-rc4 (0.1.5)
-    ruby_parser (3.8.3)
-      sexp_processor (~> 4.1)
-    rubycritic (3.1.3)
-      flay (~> 2.8)
-      flog (~> 4.4)
-      launchy (= 2.4.3)
-      parser (= 2.3.3.1)
-      rainbow (~> 2.1)
-      reek (~> 4.4)
-      ruby_parser (~> 3.8)
-      virtus (~> 1.0)
     rubyzip (1.2.1)
     sass (3.4.23)
     sass-rails (3.2.6)
@@ -418,7 +376,7 @@ GEM
     treetop (1.4.15)
       polyglot
       polyglot (>= 0.3.1)
-    ttfunk (1.0.3)
+    ttfunk (1.5.1)
     tzinfo (0.3.53)
     uglifier (3.0.4)
       execjs (>= 0.3.0, < 3)
@@ -445,21 +403,21 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  aasm (~> 3.0.25)
+  aasm (~> 3.0.26)
   american_date (= 1.1.0)
-  aws-sdk
-  bh
+  amq-protocol (= 2.0.1)
+  aws-sdk (~> 2.2.4)
+  bh (~> 1.3.6)
   bootstrap-kaminari-views (= 0.0.5)
   bunny (= 1.4.1)
-  cancancan (~> 1.9)
+  cancancan (~> 1.15.0)
   capistrano (= 2.15.4)
   capybara (= 2.4.4)
-  capybara-webkit
   carrierwave-mongoid (= 0.7.1)
   celluloid (= 0.15.2)
   ci_reporter (= 2.0.0)
   coffee-rails (~> 3.2.1)
-  config (~> 1.0.0)
+  config (= 1.0.0)
   database_cleaner (= 1.5.3)
   designmodo-flatuipro-rails!
   devise (= 3.3.0)
@@ -469,52 +427,51 @@ DEPENDENCIES
   factory_girl_rails (= 4.5.0)
   font-awesome-rails (= 4.2.0.0)
   forkr (= 1.0.2)
-  haml
+  haml (~> 4.0.7)
   ibsciss-middleware!
-  interactor (~> 3.0)
+  interactor (~> 3.1.0)
   interactor-rails (= 2.0.2)
   jquery-rails (= 3.1.3)
   jquery-ui-rails (= 5.0.5)
   kaminari (= 0.16.3)
   less-rails-bootstrap (= 3.2.0)
-  libv8
-  mongoid (~> 3.1.6)
-  mongoid-rspec
+  libv8 (~> 3.16.14.17)
+  mongoid (~> 3.1.7)
+  mongoid-rspec (~> 1.13.0)
   mongoid_auto_increment (= 0.1.2)
   nio4r (= 1.1.1)
-  nokogiri (~> 1.6.1)
-  nokogiri-happymapper
-  oj
+  nokogiri (~> 1.6.8.1)
+  nokogiri-happymapper (~> 0.5.9)
+  oj (~> 2.18.0)
   openhbx_cv2!
-  origin
-  parallel_tests
-  pd_x12
-  prawn (~> 0.11.1)
-  pry-rails
+  origin (~> 1.1.0)
+  parallel_tests (~> 2.13.0)
+  pd_x12 (~> 1.5.4)
+  prawn (~> 2.2)
+  prawn-templates (~> 0.1.2)
   psych (= 2.0.5)
   rails (= 3.2.22.5)
-  rails_best_practices
+  rails_best_practices (~> 1.17.0)
   rake (= 10.4.2)
   rgl (= 0.5.2)
   roo (= 2.1.0)
-  rsec
+  rsec (~> 0.4.2)
   rspec (= 3.3.0)
   rspec-collection_matchers (= 1.1.2)
   rspec-core (= 3.3.2)
   rspec-rails (= 3.3.3)
-  rspec_junit_formatter
+  rspec_junit_formatter (~> 0.2.3)
   ruby-ole (= 1.2.11.7)
-  ruby-progressbar (= 1.6.0)
-  rubycritic
+  ruby-progressbar (~> 1.10.0)
   sass-rails (~> 3.2.3)
-  savon (= 2.7)
-  simplecov
+  savon (~> 2.7.0)
+  simplecov (~> 0.12.0)
   spreadsheet (= 1.0.4)
-  test-unit
+  test-unit (~> 3.2.3)
   therubyracer (= 0.12.2)
-  uglifier (>= 1.0.3)
+  uglifier (~> 3.0.4)
   unicorn (= 4.8.2)
-  virtus
+  virtus (~> 1.0.5)
 
 BUNDLED WITH
-   1.16.2
+   1.17.3

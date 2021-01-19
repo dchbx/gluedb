@@ -1,16 +1,32 @@
-= form_for @vocab_upload, layout: :inline do |f|
-  .col-md-4.container
-    .row
-      = f.radio_button :kind, 'initial_enrollment', label: "Initial Enrollment"
-      = f.radio_button :kind, 'maintenance', label: "Maintenance"
-    .row
-      .col-md-12
-        .container
-          = f.file_field :vocab, :class => "file form-control"
+= form_for @vocab_upload, layout: "horizontal" do |f|
+  - if @vocab_upload.errors.any?
+    %div.alert.alert-danger.alert-dismissible{role: "alert"}
+      %button.close{type: "button", "data-dismiss" => "alert", "aria-label" => "Close"}
+        %span{"aria-hidden" => "true"}
+          &times;
+      %h4= pluralize(@vocab_upload.errors.count, "error") + " prohibited this upload:"
+      %ul
+        - @vocab_upload.errors.full_messages.each do |msg|
+          %li= msg
+  .col-sm-8
+    .form-group
+      %label.control-label.col-sm-3= "Kind"
+      .col-sm-9
+        .radio-inline
+          %label{for: "vocab_upload_kind_ie"}
+            %input{class: "", name: "vocab_upload[kind]", id: "vocab_upload_kind_ie", value: "initial_enrollment", type: "radio", checked: (@vocab_upload.kind == "initial_enrollment" ? true : nil)}
+            = "Initial Enrollment"
+        .radio-inline
+          %label{for: "vocab_upload_kind_maint", class: "radio"}
+            %input{class: "", name: "vocab_upload[kind]", id: "vocab_upload_kind_maint", value: "maintenance", type: "radio", checked: (@vocab_upload.kind == "maintenance" ? true : nil)}
+            = "Maintenance"
+    = f.file_field :vocab, label: "Vocabulary", :class => "file"
+    = f.text_field :csl_number, label: "CSL Number", placeholder: 'CSL Number'
+    = f.text_field :redmine_ticket, label: "Redmine Ticket", placeholder: 'Redmine Ticket'
     .row
       = f.check_box :bypass_validation, label: 'Bypass Premium Validation?'
       = f.hidden_field :submitted_by
     = f.submit "Upload", :class => "btn btn-primary"
-  .col-md-4
+  .col-sm-4
     = alert_box context: :info, dimissible: false do
       Total Employer Responsibilty Amounts are not validated by uploads. Make sure they are calculated correctly by hand before uploading.

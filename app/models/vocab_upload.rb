@@ -3,8 +3,10 @@ class VocabUpload
   attr_accessor :submitted_by
   attr_accessor :vocab
   attr_accessor :bypass_validation
+  attr_accessor :csl_number
+  attr_accessor :redmine_ticket
 
-  ALLOWED_ATTRIBUTES = [:kind, :submitted_by, :vocab]
+  ALLOWED_ATTRIBUTES = [:kind, :submitted_by, :vocab, :csl_number,  :redmine_ticket]
 
   include ActiveModel::Validations
   include ActiveModel::Conversion
@@ -44,6 +46,7 @@ class VocabUpload
       end
     end
 
+    log_upload(file_name, file_data)
     submit_cv(kind, file_name, file_data)
     true
   end
@@ -57,5 +60,27 @@ class VocabUpload
 
   def persisted?
     false
+  end
+
+  def log_upload(file_name, file_data)
+    broadcast_info = {
+      :routing_key => "info.events.legacy_enrollment_vocabulary.uploaded",
+      :app_id => "gluedb",
+      :headers => {
+        "file_name" => file_name,
+        "kind" =>  kind,
+        "submitted_by"  => submitted_by,
+        "bypass_validation" => bypass_validation.to_s
+      }
+    }
+    if !csl_number.blank?
+      broadcast_info[:headers]["csl_number"] = csl_number
+    end
+    if !redmine_ticket.blank?
+      broadcast_info[:headers]["redmine_ticket"] = redmine_ticket
+    end
+    Amqp::EventBroadcaster.with_broadcaster do |eb|
+      eb.broadcast(broadcast_info, file_data)
+    end
   end
 end

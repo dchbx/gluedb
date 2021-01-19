@@ -7,6 +7,11 @@ module EnrollmentAction
         other_carrier_renewal_candidates(enrollment_event).any?)
     end
 
+    def carrier_requires_simple_renewal?(enrollment_event)
+      plan = extract_plan(enrollment_event.policy_cv)
+      plan.carrier.requires_simple_renewal?
+    end
+    
     def same_carrier_renewal_candidates(enrollment_event)
       if enrollment_event.is_shop?
         shop_renewal_candidates(enrollment_event.policy_cv, true)

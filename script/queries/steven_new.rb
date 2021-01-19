@@ -5,7 +5,7 @@ policies = Policy.no_timeout.where(
   {"eg_id" => {"$not" => /DC0.{32}/},
    :enrollees => {"$elemMatch" =>
       {:rel_code => "self",
-            :coverage_start => {"$gt" => Date.new(2015,12,31)}}}}
+            :coverage_start => {"$gt" => Date.new(2017,12,31)}}}}
 )
 
 policies = policies.reject{|pol| pol.market == 'individual' && 

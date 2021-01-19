@@ -74,5 +74,63 @@ describe EnrollmentAction::Base do
         end
       end
     end
+
+
+    describe "publish_edi with options send_to_carrier & send_to_payment_processor" do
+
+      let!(:legacy_cv_publisher) { double }
+
+      context "send_to_carrier = true & send_to_payment_processor = false" do
+
+        before :each do
+          allow(trading_partner_edi_publisher).to receive(:publish).and_return(true)
+          allow(Publishers::TradingPartnerLegacyCv).to receive(:new).with(amqp_connection, event_xml, hbx_enrollment_id, employer_id).and_return(legacy_cv_publisher)
+        end
+
+        it "should only publish to carrier" do
+          publish_status, _publish_errors = subject.publish_edi(amqp_connection, event_xml, hbx_enrollment_id, employer_id, true, false)
+          expect(publish_status).to be_truthy
+          expect(trading_partner_edi_publisher).to receive(:publish).and_return(true)
+          expect(trading_partner_edi_publisher.publish).to eq true
+          expect(legacy_cv_publisher).not_to receive(:publish)
+        end
+      end
+
+
+      context "send_to_carrier = false & send_to_payment_processor = true" do
+
+        before :each do
+          allow(Publishers::TradingPartnerLegacyCv).to receive(:new).with(amqp_connection, event_xml, hbx_enrollment_id, employer_id).and_return(legacy_cv_publisher)
+          allow(legacy_cv_publisher).to receive(:publish).and_return(true)
+        end
+
+        it "should only publish to payment processor" do
+          publish_status, _publish_errors = subject.publish_edi(amqp_connection, event_xml, hbx_enrollment_id, employer_id, false, true)
+          expect(publish_status).to be_truthy
+          expect(trading_partner_edi_publisher).not_to receive(:publish)
+          expect(legacy_cv_publisher).to receive(:publish).and_return(true)
+          expect(legacy_cv_publisher.publish).to eq true
+        end
+      end
+
+
+      context "send_to_carrier = true & send_to_payment_processor = true" do
+
+        before :each do
+          allow(trading_partner_edi_publisher).to receive(:publish).and_return(true)
+          allow(Publishers::TradingPartnerLegacyCv).to receive(:new).with(amqp_connection, event_xml, hbx_enrollment_id, employer_id).and_return(legacy_cv_publisher)
+          allow(legacy_cv_publisher).to receive(:publish).and_return(true)
+        end
+
+        it "should publish to carrier and payment processor" do
+          publish_status, _publish_errors = subject.publish_edi(amqp_connection, event_xml, hbx_enrollment_id, employer_id, true, true)
+          expect(publish_status).to be_truthy
+          expect(trading_partner_edi_publisher).to receive(:publish)
+          expect(legacy_cv_publisher).to receive(:publish)
+          expect(legacy_cv_publisher.publish).to eq true
+          expect(trading_partner_edi_publisher.publish).to eq true
+        end
+      end
+    end
   end
 end

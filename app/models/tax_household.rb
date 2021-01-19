@@ -49,6 +49,10 @@ class TaxHousehold
     policies
   end
 
+  def tax_dependents
+    members_with_financials.select{ |m| m.financial_statements[0].tax_filing_status != 'tax_filer' }
+  end
+
   def no_tax_filer?
     members_with_financials.detect{|m| m.financial_statements[0].tax_filing_status == 'tax_filer' }.nil?
   end
@@ -58,18 +62,16 @@ class TaxHousehold
   end
 
   def primary
-    if tax_filers.count > 1
-      if tax_filers.detect{|filer| filer.financial_statements[0].is_tax_filing_together == false }
-        raise 'multiple tax filers filing seperate in a single tax household!!'
-      end
-
-      tax_filer = tax_filers.detect{|filer| filer.is_primary_applicant? }
-      raise "multiple tax_filers but primary applicant is not one of them??" if tax_filer.blank?
-      tax_filer
-    else
-      tax_filers.first
-    end
+    return tax_household_members.first unless tax_household_members.count > 1
+    return tax_filers.first unless tax_filers.count > 1
+    tax_filer = tax_filers.detect{|filer| filer.is_primary_applicant? }
+    return nil unless tax_filer
+    tax_filer
   end
+
+  # if tax_filers.detect{|filer| filer.financial_statements[0].is_tax_filing_together == false }
+  #   raise 'multiple tax filers filing seperate in a single tax household!!'
+  # end
 
   def spouse
     if tax_filers.count > 1
@@ -84,7 +86,6 @@ class TaxHousehold
         end
       end
     end
-
     nil
   end
 
@@ -106,7 +107,28 @@ class TaxHousehold
       m.financial_statements[0].tax_filing_status == 'dependent'
     } + members_with_financials.select {|m| 
       m.financial_statements[0].tax_filing_status == 'non_filer'
-    }.reject{|m| m == spouse }
+    }.reject{|m| m == spouse || m == primary}
+  end
+
+  def coverage_policies(year)
+    # if household.tax_households.count == 1
+    #   household.enrollments_for_year(year).map(&:policy) 
+    # else
+      pols = []
+      members_with_financials.each { |m|
+        pols += m.family_member.person.policies
+      }
+      household.enrollments_for_year(year).map(&:policy) & pols
+    # end
+  end
+
+  def self.filter_duplicates(tax_households)
+    tax_households_by_primary = tax_households.inject({}) do |data, tax_household|
+      (data["#{tax_household.primary.family_member}--#{tax_household.tax_household_members.count}"] ||= []) << tax_household
+      data     
+    end
+
+    tax_households_by_primary.inject([]) {|data, (primary, tax_households)| data << tax_households[0]}
   end
 
   # def coverage_as_of(date)

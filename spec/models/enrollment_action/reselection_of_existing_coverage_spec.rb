@@ -16,6 +16,10 @@ describe EnrollmentAction::ReselectionOfExistingCoverage, "given an enrollment e
   let(:event_set) { [event_1, event_2] }
 
   subject { EnrollmentAction::ReselectionOfExistingCoverage}
+  before do
+    allow(event_1).to receive_message_chain("enrollment_event_xml.event.body.enrollment.market").and_return true
+    allow(event_2).to receive_message_chain("enrollment_event_xml.event.body.enrollment.market").and_return true
+  end
 
   it "qualifies" do
     expect(subject.qualifies?(event_set)).to be_truthy
@@ -37,6 +41,11 @@ describe EnrollmentAction::ReselectionOfExistingCoverage, "given an enrollment e
   let(:event_set) { [event_1, event_2] }
 
   subject { EnrollmentAction::ReselectionOfExistingCoverage}
+
+  before do
+    allow(event_1).to receive_message_chain("enrollment_event_xml.event.body.enrollment.market").and_return true
+    allow(event_2).to receive_message_chain("enrollment_event_xml.event.body.enrollment.market").and_return true
+  end
 
   describe "the second enrollment has more members" do
     let(:member_ids_2) { [1,2,3] }
@@ -71,10 +80,54 @@ describe EnrollmentAction::ReselectionOfExistingCoverage, "given an enrollment e
 
   subject { EnrollmentAction::ReselectionOfExistingCoverage}
 
+  before do
+    allow(event_1).to receive_message_chain("enrollment_event_xml.event.body.enrollment.market").and_return true
+    allow(event_2).to receive_message_chain("enrollment_event_xml.event.body.enrollment.market").and_return true
+  end
+
   it "does not qualify" do
     expect(subject.qualifies?(event_set)).to be_falsey
   end
 end
+
+describe EnrollmentAction::ReselectionOfExistingCoverage, "market changes" do
+  let(:plan) { instance_double(Plan, :id => 1) }
+
+  let(:member_ids_1) { [1,2] }
+  let(:member_ids_2) { [1,2] }
+
+  let(:event_1) { instance_double(ExternalEvents::EnrollmentEventNotification, :existing_plan => plan, :all_member_ids => member_ids_1) }
+  let(:event_2) { instance_double(ExternalEvents::EnrollmentEventNotification, :existing_plan => plan, :all_member_ids => member_ids_2) }
+  let(:event_set) { [event_1, event_2] }
+
+  subject { EnrollmentAction::ReselectionOfExistingCoverage}
+
+  it "qualifies" do
+    allow(event_1).to receive_message_chain("enrollment_event_xml.event.body.enrollment.market").and_return 'ivl'
+    allow(event_2).to receive_message_chain("enrollment_event_xml.event.body.enrollment.market").and_return 'coveall'
+    expect(subject.qualifies?(event_set)).to be_falsey
+  end
+end
+
+describe EnrollmentAction::ReselectionOfExistingCoverage, "the same market" do
+  let(:plan) { instance_double(Plan, :id => 1) }
+
+  let(:member_ids_1) { [1,2] }
+  let(:member_ids_2) { [1,2] }
+
+  let(:event_1) { instance_double(ExternalEvents::EnrollmentEventNotification, :existing_plan => plan, :all_member_ids => member_ids_1) }
+  let(:event_2) { instance_double(ExternalEvents::EnrollmentEventNotification, :existing_plan => plan, :all_member_ids => member_ids_2) }
+  let(:event_set) { [event_1, event_2] }
+
+  subject { EnrollmentAction::ReselectionOfExistingCoverage}
+
+  it "does not qualify" do
+    allow(event_1).to receive_message_chain("enrollment_event_xml.event.body.enrollment.market").and_return 'ivl'
+    allow(event_2).to receive_message_chain("enrollment_event_xml.event.body.enrollment.market").and_return 'ivl'
+    expect(subject.qualifies?(event_set)).to be_truthy
+  end
+end
+
 
 describe EnrollmentAction::ReselectionOfExistingCoverage, "given a qualified enrollment set, being persisted" do
   let(:plan) { instance_double(Plan, :id => 1) }

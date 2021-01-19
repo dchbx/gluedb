@@ -5,6 +5,7 @@ module EnrollmentAction
     def self.qualifies?(chunk)
       return false if chunk.length < 2
       return false unless same_plan?(chunk)
+      return false if new_market?(chunk)
       !(dependents_dropped?(chunk) || dependents_added?(chunk))
     end
 

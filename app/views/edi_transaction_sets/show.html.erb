@@ -5,7 +5,7 @@
 </div>
 
 <div class="row">
-  <div class="col-md-5">
+  <div class="col-md-12">
     <dl class="dl-horizontal">
       <dt><%= model_class.human_attribute_name(:transaction_type) %>:</dt>
       <dd><%= @edi_transaction_set.st01 %></dd>
@@ -41,8 +41,9 @@
       <dd><%= @edi_transaction_set.body %></dt>
     </dl>
   </div>
-
-  <div class="col-md-7">
+</div>
+<div class='row'>
+  <div class='col-md-12'>
     <div class="panel panel-default">
       <div class="panel-heading">
         <h3 class="panel-title">
@@ -56,31 +57,9 @@
     </div>
   </div>
 </div>
+<%= link_to "EDI Transmission", edi_transmission_path(@edi_transaction_set.transmission_id), {class: 'btn btn-info btn-sm'} %>
+<% if @edi_transaction_set.policy && @edi_transaction_set.policy.subscriber %>
+  <%= link_to "Individual", person_path(@edi_transaction_set.policy.subscriber.person), {class: 'btn btn-info btn-sm'}  %>
+<p class="text-right"><small><%= "updated: #{@edi_transaction_set.updated_at.strftime('%m-%d-%Y') if @edi_transaction_set.updated_at.present?}" %></small></p>
+<% end %>
 
-
-<div class="row">
-  <div class="col-md-4 col-md-offset-1">
-    <div class="form-actions">
-      <%= link_to "EDI Transmission", edi_transmission_path(@edi_transaction_set.transmission_id), {class: 'btn btn-info btn-sm'} %>
-      <% if @edi_transaction_set.policy %>
-        <% if @edi_transaction_set.policy.subscriber %>
-  	  <%= link_to "Individual", person_path(@edi_transaction_set.policy.subscriber.person), {class: 'btn btn-info btn-sm'}  %>
-        <% end %>
-      <% end %>
-    </div>
-  </div>
-</div>
-
-
-  <p class="text-right"><small><%= "updated: #{@edi_transaction_set.updated_at.strftime('%m-%d-%Y') if @edi_transaction_set.updated_at.present?}" %></small></p>
-
-  <div class="well well-sm default">
-	  <div class="form-actions">
-      <% if @edi_transaction_set.policy %>
-      <% if @edi_transaction_set.policy.subscriber %>
-	      <%= link_to "Individual", person_path(@edi_transaction_set.policy.subscriber.person), {class: 'btn btn-info btn-sm'}  %>
-      <%= link_to(t('.back', :default => t("helpers.links.back")), person_path(@edi_transaction_set.policy.subscriber.person), {:class => 'btn btn-primary'})  %>
-      <% end %>
-      <% end %>
-    </div>
-  </div>

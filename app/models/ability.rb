@@ -11,6 +11,11 @@ class Ability
     elsif user.role == "edi_ops"
       can :manage, :all
       cannot :modify, User
+      cannot :edit, User
+      cannot :show, User
+      cannot :update, User
+      cannot :delete, User
+      cannot :index, User
     elsif user.role == "user"
       can :read, :all
     elsif user.role == "service"

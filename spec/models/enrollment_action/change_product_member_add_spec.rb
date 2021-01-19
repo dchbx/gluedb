@@ -46,8 +46,9 @@ describe EnrollmentAction::PlanChangeDependentAdd, "given a qualified enrollment
 
   let(:terminated_policy_cv) { instance_double(Openhbx::Cv2::Policy, :enrollees => [enrollee_primary, enrollee_secondary])}
   let(:new_policy_cv) { instance_double(Openhbx::Cv2::Policy, :enrollees => [enrollee_primary, enrollee_secondary, enrollee_new]) }
-  let(:plan) { instance_double(Plan, :id => 1) }
-  let(:policy) { instance_double(Policy, :hbx_enrollment_ids => [1,2]) }
+  let(:plan) { instance_double(Plan, :id => 1, carrier: carrier) }
+  let(:carrier) { instance_double(Carrier, :plan_change_renewal_dependent_add_transmitted_as_renewal => true) }
+  let(:policy) { instance_double(Policy, :hbx_enrollment_ids => [1,2], carrier: carrier) }
   let(:primary_db_record) { instance_double(ExternalEvents::ExternalMember, :persist => true) }
   let(:secondary_db_record) { instance_double(ExternalEvents::ExternalMember, :persist => true) }
   let(:new_db_record) { instance_double(ExternalEvents::ExternalMember, :persist => true) }
@@ -69,6 +70,7 @@ describe EnrollmentAction::PlanChangeDependentAdd, "given a qualified enrollment
 
   let(:policy_updater) { instance_double(ExternalEvents::ExternalPolicy) }
   let(:expected_termination_date) { double }
+  let(:active_policy) { instance_double(Policy) }
 
   subject do
     EnrollmentAction::PlanChangeDependentAdd.new(termination_event, dependent_add_event)
@@ -78,13 +80,22 @@ describe EnrollmentAction::PlanChangeDependentAdd, "given a qualified enrollment
     allow(ExternalEvents::ExternalMember).to receive(:new).with(member_primary).and_return(primary_db_record)
     allow(ExternalEvents::ExternalMember).to receive(:new).with(member_secondary).and_return(secondary_db_record)
     allow(ExternalEvents::ExternalMember).to receive(:new).with(member_new).and_return(new_db_record)
-
-    allow(ExternalEvents::ExternalPolicy).to receive(:new).with(new_policy_cv, plan, false).and_return(policy_updater)
+    allow(ExternalEvents::ExternalPolicy).to receive(:new).with(new_policy_cv, plan, false, market_from_payload: subject.action).and_return(policy_updater)
     allow(policy_updater).to receive(:persist).and_return(true)
     allow(termination_event.existing_policy).to receive(:terminate_as_of).with(expected_termination_date).and_return(true)
     allow(termination_event).to receive(:subscriber_end).and_return(false)
     allow(subject.action).to receive(:existing_policy).and_return(false)
+    allow(subject.action).to receive(:existing_plan).and_return(plan)
+    allow(subject.action).to receive(:kind).and_return(dependent_add_event)
     allow(subject).to receive(:select_termination_date).and_return(expected_termination_date)
+    allow(Observers::PolicyUpdated).to receive(:notify).with(policy)
+    allow(subject).to receive(:same_carrier_renewal_candidates).with(dependent_add_event).and_return([active_policy])
+    allow(dependent_add_event).to receive(:plan_change_dep_add_or_drop_to_renewal_policy?).with(active_policy, policy).and_return(false)
+  end
+
+  it "notifies of the termination" do
+    expect(Observers::PolicyUpdated).to receive(:notify).with(policy)
+    subject.persist
   end
 
   it "successfully creates the new policy" do
@@ -106,11 +117,13 @@ describe EnrollmentAction::PlanChangeDependentAdd, "given a qualified enrollment
   let(:enrollee_new) { double(:m_id => 2, :coverage_start => :one_month_ago) }
 
   let(:plan) { instance_double(Plan, :id => 1) }
-  let(:policy) { instance_double(Policy, :enrollees => [enrollee_primary, enrollee_new], :eg_id => 1) }
-
+  let(:carrier) { instance_double(Carrier, :plan_change_renewal_dependent_add_transmitted_as_renewal => true) }
+  let(:policy) { instance_double(Policy, :enrollees => [enrollee_primary, enrollee_new], :eg_id => 1, :carrier => carrier) }
+  let(:active_policy) { instance_double(Policy) }
   let(:dependent_add_event) { instance_double(
     ::ExternalEvents::EnrollmentEventNotification,
     :event_xml => event_xml,
+    :existing_policy => policy,
     :all_member_ids => [1,2],
     :hbx_enrollment_id => 2,
     :employer_hbx_id => 1
@@ -136,7 +149,8 @@ describe EnrollmentAction::PlanChangeDependentAdd, "given a qualified enrollment
     allow(action_publish_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#change_product_member_add")
     allow(action_publish_helper).to receive(:keep_member_ends).with([])
     allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, dependent_add_event.hbx_enrollment_id, termination_event.employer_hbx_id)
-    allow(subject.action).to receive(:existing_policy).and_return(false)
+    allow(subject).to receive(:same_carrier_renewal_candidates).with(dependent_add_event).and_return([active_policy])
+    allow(dependent_add_event).to receive(:plan_change_dep_add_or_drop_to_renewal_policy?).with(active_policy, policy).and_return(false)
   end
 
   subject do
@@ -155,6 +169,12 @@ describe EnrollmentAction::PlanChangeDependentAdd, "given a qualified enrollment
 
   it "publishes resulting xml to edi" do
     expect(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, dependent_add_event.hbx_enrollment_id, dependent_add_event.employer_hbx_id)
+    subject.publish
+  end
+
+  it "publishes an auto renew event adding dependents on renewal policy" do
+    subject.plan_change_dep_adding_to_renewal = true
+    expect(action_publish_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#auto_renew")
     subject.publish
   end
 end

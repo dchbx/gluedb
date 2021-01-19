@@ -116,4 +116,25 @@ describe EnrollmentAction::ReinstatementComparisonHelper do
       expect(subject.shop_reinstatement_candidates(policy_cv)).to eq([:policy])
     end
   end
+
+  describe "#is_continuation_of_coverage_event?" do
+    let(:policy_cv) { instance_double(Openhbx::Cv2::Policy, :previous_policy_id => previous_policy_id) }
+    let(:enrollment_action) { instance_double(ExternalEvents::EnrollmentEventNotification, :policy_cv => policy_cv) }
+
+    describe "given a policy that does not have a previous policy id" do
+      let(:previous_policy_id) { nil }
+
+      it "is false" do
+        expect(subject.is_continuation_of_coverage_event?(enrollment_action)).to be_falsey
+      end
+    end
+
+    describe "given a policy that has a previous policy id" do
+      let(:previous_policy_id) { "SOME POLICY ID" }
+
+      it "is true" do
+        expect(subject.is_continuation_of_coverage_event?(enrollment_action)).to be_truthy
+      end
+    end
+  end
 end

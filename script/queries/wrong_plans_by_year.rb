@@ -20,4 +20,3 @@ end
 bads << badivl
 bads << badshop
 
-binding.pry

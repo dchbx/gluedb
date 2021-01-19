@@ -9,7 +9,7 @@ class User
          :recoverable, :rememberable, :trackable, :validatable, :registerable
 
   # Setup accessible (or protected) attributes for your model
-  attr_accessible :email, :password, :password_confirmation, :remember_me, :approved, :role
+  attr_accessible :email, :password, :password_confirmation, :remember_me, :approved, :role, :updated_by
 
   ## Enable Admin approval
   ## Seed: https://github.com/plataformatec/devise/wiki/How-To%3a-Require-admin-to-activate-account-before-sign_in
@@ -36,6 +36,7 @@ class User
   field :authentication_token
 
   field :role, :type => String, :default => "service"
+  field :updated_by, :type => String
 
   ROLES = %w[user edi_ops admin service]
 
@@ -54,6 +55,14 @@ class User
   # after_create :send_admin_mail
 
   before_save :ensure_authentication_token
+
+  def update_attributes_as(update_params, current_user = nil)
+    params = update_params.dup
+    if current_user
+      params[:updated_by] = current_user.email
+    end
+    self.update_attributes(params)
+  end
 
   def ensure_authentication_token
     if authentication_token.blank?

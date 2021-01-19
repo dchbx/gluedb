@@ -4,12 +4,10 @@ require 'spec_helper'
 require File.expand_path("../../config/environment", __FILE__)
 require 'rspec/rails'
 require 'capybara/rspec'
-require 'capybara/webkit/matchers'
 
 # Requires supporting ruby files with custom matchers and macros, etc,
 # in spec/support/ and its subdirectories.
 Dir[Rails.root.join("spec/support/**/*.rb")].each { |f| require f }
-Capybara.javascript_driver = :webkit
 # Add additional requires below this line. Rails is not loaded until this point!
 
 # Requires supporting ruby files with custom matchers and macros, etc, in
@@ -69,6 +67,5 @@ RSpec.configure do |config|
   config.include FactoryGirl::Syntax::Methods
   config.include Features, type: :feature
   config.include Requests, type: :request
-  config.include(Capybara::Webkit::RspecMatchers, :type => :feature)
   config.infer_spec_type_from_file_location!
 end

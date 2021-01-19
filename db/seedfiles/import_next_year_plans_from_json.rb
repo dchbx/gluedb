@@ -1,4 +1,4 @@
-year = '2017'
+year = '2019'
 
 puts "Importing #{year} plans"
 plan_file = File.open("db/seedfiles/#{year}_plans.json", "r")
@@ -14,7 +14,9 @@ plan_data.each do |pd|
     plan.id = pd["id"]
     plan.save!
   else
-    plan.update_attributes(pd)
+    new_data = pd.dup
+    new_data.delete("id")
+    plan.update_attributes(new_data)
   end
 end
 puts "After: total #{Plan.count} plans"

@@ -1,0 +1,34 @@
+<% if transactions.count < 1 %>
+  <div class="row"><div class="col-md-offset-1 col-md-2"><p>None found</p></div></div>
+<% else %>
+  <div class="row">
+  <table class="table col-md-12">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>State</th>
+        <th>Submitted at</th>
+        <th>Reason</th>
+        <% if can? :read, Policy %>
+          <th>Action</th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% transactions.each do |trans| %>
+      <tr>
+        <td><span class="fui-export">&nbsp;</span> <%= trans.transaction_kind.humanize %></td>
+        <td class='capitalize-text'><%= trans_aasm_state(trans) %></td>
+        <td><%= trans.submitted_at.try(:strftime, "%m/%d/%Y")%></td>
+        <td><%= trans.reason %></td>
+        <td>
+          <% if can? :read, Policy %>
+            <%= link_to 'View Details', legacy_cv_transaction_path(trans) %>
+          <% end %>
+        </td>
+      </tr>
+      <% end %>
+    </tbody>
+  </table>
+  </div>
+<% end %>

@@ -1,0 +1,62 @@
+<% model_class = Protocols::LegacyCv::LegacyCvTransaction %>
+<%t '.title', :default => model_class.model_name.human.pluralize.titleize %>
+<div class="page-header">
+  <%= render 'shared/breadcrumb', crumbs: ['Payment Processor Transactions'] %>
+
+   <div class="row">
+    <div class="col-md-offset-8 col-md-4">
+      <%= render 'shared/search', url: legacy_cv_transactions_path, q: @q, placeholder: "EG ID, Policy ID" %>
+    </div>
+  </div>
+</div>
+
+ <table class="table table-condensed">
+  <thead>
+    <tr>
+      <th>Enrollment Group ID</th>
+      <th>Submitted At</th>
+      <th>Transaction Kind</th>
+      <th>Reason</th>
+      <th>Action</th>
+      <th>File Location</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <%= table_empty_to_human if @legacy_cv_transactions.count < 1 %>
+    <% @legacy_cv_transactions.each do |transaction| %>
+      <tr>
+        <td>
+          <%= link_to transaction.eg_id.to_s, person_path(transaction.policy.subscriber.person) %>
+        </td>
+        <td>
+          <%= transaction.submitted_at.to_s %>
+        </td>
+        <td>
+          <%= transaction.transaction_kind %>
+        </td>
+        <td>
+          <%= transaction.reason %>
+        </td>
+        <td>
+          <%= transaction.action %>
+        </td>
+        <td>
+          <%= transaction.location %>
+        </td>
+        <td>
+          <%=link_to "Show", legacy_cv_transaction_path(transaction.id), class: "btn btn-primary", title: "Display Legacy CV Transaction #{transaction.id}" %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+ <div class="row">
+  <div class="col-md-8">
+    <%= paginate @legacy_cv_transactions, theme: "twitter-bootstrap", pagination_class: "pagination-plain" %>
+  </div>
+  <div class="rol-md-4">
+    <p><%= "#{number_with_delimiter(@legacy_cv_transactions.count)} / #{number_with_delimiter(model_class.count)} " %><small>(policies selected / total)</small></p>
+  </div>
+</div>

@@ -2,15 +2,22 @@ module ExternalEvents
   class ExternalPolicy
     attr_reader :policy_node
     attr_reader :plan
+    attr_reader :kind
+
+    attr_reader :created_policy
 
     include Handlers::EnrollmentEventXmlHelper
 
     # p_node : Openhbx::Cv2::Policy
     # p_record : Plan
-    def initialize(p_node, p_record, cobra_reinstate = false)
+    # optional parsing options to pass in additional parsed parameters to populate fields of policy
+    # upon creation and persistance.
+    def initialize(p_node, p_record, cobra_reinstate = false, **parsing_options)
       @policy_node = p_node
       @plan = p_record
       @cobra = cobra_reinstate
+      @kind = parsing_options[:market_from_payload]
+      @policy_reinstate = parsing_options[:policy_reinstate]
     end
 
     def extract_pre_amt_tot
@@ -173,7 +180,7 @@ module ExternalEvents
 
     def build_responsible_party(responsible_person)
       if responsible_person_exists?
-        responsible_person.responsible_parties << ResponsibleParty.new({:entity_identifier => "responsible party" }) 
+        responsible_person.responsible_parties << ResponsibleParty.new({:entity_identifier => "responsible party" })
         responsible_person.responsible_parties.first
       end
     end
@@ -222,15 +229,29 @@ module ExternalEvents
         :eg_id => extract_enrollment_group_id(@policy_node),
         :pre_amt_tot => extract_pre_amt_tot,
         :tot_res_amt => extract_tot_res_amt,
+        :kind => @kind,
         :cobra_eligibility_date => @cobra ? extract_cobra_eligibility_date : nil
       }.merge(extract_other_financials).merge(extract_rating_details).merge(responsible_party_attributes))
+
+      # reinstated policy aasm state need to be resubmitted
+      if @policy_node.previous_policy_id.present? && @policy_reinstate
+        policy.aasm_state = "resubmitted"
+        #updating NPT flag on previous policy to false
+        previous_policy = Policy.where(:hbx_enrollment_ids  => {"$in" => [@policy_node.previous_policy_id.to_s]}).first
+        if previous_policy.present?
+          previous_policy.update_attributes!(term_for_np: false)
+          Observers::PolicyUpdated.notify(previous_policy)
+        end
+      end
 
       build_subscriber(policy)
 
       other_enrollees = @policy_node.enrollees.reject { |en| en.subscriber? }
-      other_enrollees.each do |en|
+      results = other_enrollees.each do |en|
         build_enrollee(policy, en)
       end
+      Observers::PolicyUpdated.notify(policy)
+      results
     end
   end
 end

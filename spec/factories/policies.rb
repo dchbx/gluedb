@@ -17,7 +17,7 @@ FactoryGirl.define do
     enrollment_kind 'open_enrollment'
 
     after(:create) do |p, evaluator|
-      create_list(:enrollee, 2, policy: p)
+      create_list(:enrollee, 2, policy: p, coverage_start: evaluator.coverage_start, coverage_end: evaluator.coverage_end)
     end
 
     trait :shop do
@@ -41,6 +41,11 @@ FactoryGirl.define do
         create_list(:enrollee, 2, policy: p)
         create_list(:cancelled_enrollee,1, policy: p)
       end
+    end
+
+    transient do
+      coverage_start { Date.new(2014,1,2) }
+      coverage_end   { Date.new(2014,3,4) }
     end
 
     factory :shop_policy, traits: [:shop]

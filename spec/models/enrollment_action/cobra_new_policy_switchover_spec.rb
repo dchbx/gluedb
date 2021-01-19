@@ -4,7 +4,7 @@ describe EnrollmentAction::CobraNewPolicySwitchover, "given:
 - 1 event
 " do
 
-  let(:event_1) { instance_double(ExternalEvents::EnrollmentEventNotification) } 
+  let(:event_1) { instance_double(ExternalEvents::EnrollmentEventNotification) }
 
   subject { EnrollmentAction::CobraNewPolicySwitchover }
 
@@ -139,12 +139,19 @@ describe EnrollmentAction::CobraNewPolicySwitchover, "given an enrollment event 
   before :each do
     allow(ExternalEvents::ExternalMember).to receive(:new).with(member_primary).
       and_return(primary_db_record)
-    allow(ExternalEvents::ExternalPolicy).to receive(:new).with(new_policy_cv, new_plan, true).
+    allow(ExternalEvents::ExternalPolicy).to receive(:new).with(new_policy_cv, new_plan, true, market_from_payload: subject.action).
       and_return(policy_updater)
     allow(policy).to receive(:terminate_as_of).with(termination_date).
       and_return(true)
     allow(policy_updater).to receive(:persist).and_return(true)
     allow(subject.action).to receive(:existing_policy).and_return(false)
+    allow(subject.action).to receive(:kind).and_return(plan_change_event)
+    allow(Observers::PolicyUpdated).to receive(:notify).with(policy)
+  end
+
+  it "notifies of the termination" do
+    expect(Observers::PolicyUpdated).to receive(:notify).with(policy)
+    subject.persist
   end
 
   it "persists the change" do
