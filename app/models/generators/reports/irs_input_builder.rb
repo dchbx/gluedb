@@ -169,6 +169,13 @@ module Generators::Reports
         coverage_end_month = REPORT_MONTHS
       end
 
+      policy_monthly_premium_calculator = Services::PolicyMonthlyPremiumCalculator.new(policy_disposition: @policy_disposition, calender_year: calender_year)
+
+      silver_plan = Plan.where({:year => calender_year, :hios_plan_id => settings[:tax_document][calender_year][:slcsp]}).first
+      policy_slcsp_premium_calculator = Services::PolicyMonthlyPremiumCalculator.new(policy_disposition: @policy_disposition, calender_year: calender_year, silver_plan: silver_plan)
+
+      policy_monthly_aptc_calculator = Services::PolicyMonthlyAptcCalculator.new(policy_disposition: @policy_disposition, calender_year: calender_year)
+
       has_middle_of_month_coverage_end = false
       has_middle_of_month_coverage_begin = false
 
@@ -184,20 +191,8 @@ module Generators::Reports
       # Commented to generate premiums only for REPORT_MONTHS
       @notice.monthly_premiums = (@policy_disposition.start_date.month..coverage_end_month).inject([]) do |data, i|
 
-        premium_amount = @policy_disposition.as_of(Date.new(calender_year, i, 1)).ehb_premium
-
-        # if coverage_end_month == i && has_middle_of_month_coverage_end
-        #   premium_amount = as_dollars((@policy_disposition.end_date.day.to_f / @policy_disposition.end_date.end_of_month.day) * premium_amount)
-        # end
-
-        # Prorated Start Dates
-        if @policy_disposition.start_date.month == i && has_middle_of_month_coverage_begin
-          premium_amount = as_dollars(((@policy_disposition.start_date.end_of_month.day.to_f - @policy_disposition.start_date.day.to_f + 1.0) / @policy_disposition.start_date.end_of_month.day) * premium_amount)
-        end
-
-        if coverage_end_month == i && has_middle_of_month_coverage_end
-          premium_amount = as_dollars((@policy_disposition.end_date.day.to_f / @policy_disposition.end_date.end_of_month.day) * premium_amount)
-        end
+        #premium amount calculation and prorated calculation
+        premium_amount = policy_monthly_premium_calculator.ehb_premium_for(i)
 
         if npt_policy
           if @policy.subscriber.coverage_end.present? && ((@policy.subscriber.coverage_end.end_of_month - 1.day) == @policy.subscriber.coverage_end)
@@ -226,68 +221,27 @@ module Generators::Reports
           end
         end
 
-        # if @policy.id == 65209
-        #   if i > 3
-        #     premium_amount = 0
-        #   end
-        # end
-
         premium_amounts = {
           serial: i,
           premium_amount: premium_amount
         }
 
-        # @notice.has_aptc = if @multi_version_pol.present? # && @multi_version_pol.assisted?
-        #   true ##@multi_version_pol
-        # else
-        #   @policy_disposition.as_of(Date.new(calender_year, i, 1)).applied_aptc > 0
-        # end
-
-        @notice.has_aptc = @policy_disposition.as_of(Date.new(calender_year, i, 1)).applied_aptc > 0
+        max_aptc_amt = policy_monthly_aptc_calculator.max_aptc_amount_for(i)
+        @notice.has_aptc = max_aptc_amt > 0
 
         if @notice.has_aptc
-          # silver_plan_premium = 0
-          # if SLCSP_CORRECTIONS[@policy.id]
-          #   silver_plan_premium = SLCSP_CORRECTIONS[@policy.id]
-          # else
-          #   silver_plan = Plan.where({ "year" => 2014, "hios_plan_id" => "94506DC0390006-01" }).first
-          #   silver_plan_premium = @policy_disposition.as_of(Date.new(calender_year, i, 1), silver_plan).ehb_premium
-          # end
+          silver_plan_premium = policy_slcsp_premium_calculator.ehb_premium_for(i)
+          given_aptc_amt = policy_monthly_premium_calculator.ehb_premium_for(i)
 
-          # aptc_amt = @multi_version_pol.nil? ? 
-          # @policy_disposition.as_of(Date.new(calender_year, i, 1)).applied_aptc :
-          # @multi_version_pol.aptc_as_of(Date.new(calender_year, i, 1))
-
-          # silver_plan = Plan.where({ "year" => 2014, "hios_plan_id" => "94506DC0390006-01" }).first
-          # silver_plan_premium = @policy_disposition.as_of(Date.new(calender_year, i, 1), silver_plan).ehb_premium
-
-          # silver_plan = Plan.where({ "year" => 2015, "hios_plan_id" => "94506DC0390006-01" }).first
-          # silver_plan_premium = @policy_disposition.as_of(Date.new(calender_year, i, 1), silver_plan).ehb_premium
-
-          # silver_plan = Plan.where({ "year" => 2016, "hios_plan_id" => "94506DC0390006-01" }).first
-          # silver_plan_premium = @policy_disposition.as_of(Date.new(calender_year, i, 1), silver_plan).ehb_premium
-
-          silver_plan = Plan.where({:year => calender_year, :hios_plan_id => settings[:tax_document][calender_year][:slcsp]}).first
-          silver_plan_premium = @policy_disposition.as_of(Date.new(calender_year, i, 1), silver_plan).ehb_premium
-
-
-          aptc_amt = @policy_disposition.as_of(Date.new(calender_year, i, 1)).applied_aptc
-
-          # Prorated Start Dates
-          if @policy_disposition.start_date.month == i && has_middle_of_month_coverage_begin
-            aptc_amt = as_dollars(((@policy_disposition.start_date.end_of_month.day.to_f - @policy_disposition.start_date.day.to_f + 1.0) / @policy_disposition.start_date.end_of_month.day) * aptc_amt)
-          end
-
-          if coverage_end_month == i && has_middle_of_month_coverage_end
-            aptc_amt = as_dollars((@policy_disposition.end_date.day.to_f / @policy_disposition.end_date.end_of_month.day) * aptc_amt)
+          if given_aptc_amt > max_aptc_amt
+            aptc_amt = max_aptc_amt
+          else
+            aptc_amt = given_aptc_amt
           end
 
           # NPT's
 
           if npt_policy
-            if coverage_end_month == i && (has_middle_of_month_coverage_end || @policy_disposition.end_date != @policy_disposition.end_date.end_of_month)
-              aptc_amt = as_dollars((@policy_disposition.end_date.day.to_f / @policy_disposition.end_date.end_of_month.day) * aptc_amt)
-            end
 
             if has_middle_of_month_coverage_end
               if (coverage_end_month - 1) == i
