@@ -3,7 +3,7 @@ require 'rails_helper'
 describe Generators::Reports::IrsYearlySerializer, :dbclean => :after_each do
 
   let(:address)  { FactoryGirl.create(:address, state:"CA", street_1:"test", street_2:"test 2", city: 'city', zip: "12022", street_1:"street 1", street_2: "street 2", person: person) }
-  let(:coverage_start) {Date.today.beginning_of_year}
+  let(:coverage_start) {Date.today.beginning_of_year.prev_year}
   let(:coverage_end) {coverage_start.end_of_year }
   let(:enrollee) {policy.enrollees.create!(m_id: person.members.first.hbx_member_id, rel_code: "self", coverage_start: coverage_start, coverage_end: coverage_end) }
   let(:plan) {FactoryGirl.create(:plan, hios_plan_id: "23232323", ehb: 12, carrier: carrier)} 
