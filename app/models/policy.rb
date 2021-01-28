@@ -101,6 +101,7 @@ class Policy
   before_save :invalidate_find_cache
   before_save :check_for_cancel_or_term
   before_save :check_multi_aptc
+  after_save :cancel_ivl_renewal
 
   scope :all_active_states,   where(:aasm_state.in => %w[submitted resubmitted effectuated])
   scope :all_inactive_states, where(:aasm_state.in => %w[canceled carrier_canceled terminated])
@@ -923,6 +924,47 @@ class Policy
 
   def self.check_enrollee_coverage_end?(updated_enrollee)
     (updated_enrollee.coverage_end.try(:day) == 31) && (updated_enrollee.coverage_end.try(:month) == 12)
+  end
+
+  def cancel_ivl_renewal
+    if subscriber.present? && (terminated? || canceled?) && carrier && carrier.termination_cancels_renewal
+      matched_ivl_renewals.each do |pol|
+        pol.cancel_via_hbx!
+      end
+    end
+  end
+
+  def matched_ivl_renewals
+    subscriber_person = subscriber.person
+    subscriber_person.policies.select do |pol|
+      is_ivl_renewal_policy?(pol)
+    end
+  end
+
+  def is_ivl_renewal_policy?(pol)
+    return false if pol.id == id
+    return false if pol.is_shop?
+    return false if pol.canceled?
+    return false if pol.terminated?
+    return false if pol.subscriber.blank?
+    return false if pol.subscriber.m_id != subscriber.m_id
+    return false if pol.plan.blank?
+    return false unless plan.carrier_id == pol.plan.carrier_id
+    return false unless plan.coverage_type == pol.plan.coverage_type
+    return false unless plan.year + 1 == pol.plan.year
+    return false unless plan_matched?(plan, pol.plan)
+    return false unless pol.active_member_ids.all? { |m_id| enrollees.map(&:m_id).include?(m_id)}
+    return false if pol.subscriber.coverage_end.present?
+    pol.subscriber.coverage_start == coverage_year.end + 1
+  end
+
+  def plan_matched?(active_plan, renewal_plan)
+    if active_plan.metal_level == "catastrophic" && active_plan.coverage_type == "health"
+      ['94506DC0390008','86052DC0400004'].include?(active_plan.hios_plan_id.split("-").first) &&
+          (['94506DC0390010','86052DC0400010'].include?(renewal_plan.hios_plan_id.split("-").first) || active_plan.renewal_plan == renewal_plan)
+    else
+      (active_plan.renewal_plan == renewal_plan || (active_plan.renewal_plan.present? && active_plan.renewal_plan.hios_plan_id.split("-").first == renewal_plan.hios_plan_id.split("-").first))
+    end
   end
 
   protected

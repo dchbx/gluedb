@@ -173,6 +173,7 @@ describe EnrollmentAction::RenewalDependentDrop, "given a qualified enrollent se
     allow(termination_publish_helper).
       to receive(:filter_affected_members).with([2])
     allow(subject).to receive(:publish_edi).with(amqp_connection, termination_helper_result_xml, terminated_policy_eg_id, employer_hbx_id)
+    allow(action_event).to receive(:renewal_cancel_policy).and_return([])
   end
 
   it "publishes successfully" do
@@ -189,5 +190,35 @@ describe EnrollmentAction::RenewalDependentDrop, "given a qualified enrollent se
       to receive(:publish_edi).
       with(amqp_connection, action_helper_result_xml, 3, 1)
     subject.publish
+  end
+
+  context "carrier with canceled_renewal_causes_new_coverage" do
+    let(:carrier) { instance_double(Carrier, :canceled_renewal_causes_new_coverage => true) }
+    let(:policy) { instance_double(Policy, :carrier => carrier) }
+
+    before do
+      subject.terminated_policy_information = [[terminated_policy,[2]]]
+      allow(::EnrollmentAction::EnrollmentTerminationEventWriter).to receive(:new).with(terminated_policy, [1, 2]).and_return(termination_writer)
+      allow(termination_writer).to receive(:write).with("transaction_id_placeholder", "urn:openhbx:terms:v1:enrollment#change_member_terminate").and_return(termination_writer_result_xml)
+      allow(EnrollmentAction::ActionPublishHelper).
+          to receive(:new).
+                 with(event_xml).and_return(action_helper)
+      allow(action_helper).
+          to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#active_renew").
+                 and_return(true)
+      allow(action_helper).to receive(:keep_member_ends).with([]).and_return(true)
+      allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, 3, 1).and_return([true, nil])
+      allow(::EnrollmentAction::ActionPublishHelper).to receive(:new).with(termination_writer_result_xml).and_return(termination_publish_helper)
+      allow(termination_publish_helper).
+          to receive(:filter_affected_members).with([2])
+      allow(subject).to receive(:publish_edi).with(amqp_connection, termination_helper_result_xml, terminated_policy_eg_id, employer_hbx_id)
+      allow(action_event).to receive(:renewal_cancel_policy).and_return(true)
+      allow(action_event).to receive(:existing_policy).and_return(policy)
+    end
+
+    it "publishes an event of type initial" do
+      expect(action_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#initial")
+      subject.publish
+    end
   end
 end

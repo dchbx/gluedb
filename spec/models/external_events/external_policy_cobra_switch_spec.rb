@@ -37,7 +37,7 @@ describe ExternalEvents::ExternalPolicyCobraSwitch, "given:
         :pre_amt_tot => BigDecimal.new(pre_amt_tot),
         :tot_emp_res_amt => BigDecimal.new(tot_emp_res_amt),
         :cobra_eligibility_date => cobra_start_date,
-        :aasm_state => "submitted"
+        :aasm_state => "resubmitted"
       }
   end
 
@@ -47,7 +47,7 @@ describe ExternalEvents::ExternalPolicyCobraSwitch, "given:
         :pre_amt_tot => BigDecimal.new(pre_amt_tot),
         :tot_emp_res_amt => BigDecimal.new(tot_emp_res_amt),
         :cobra_eligibility_date => cobra_start_date,
-        :aasm_state => "submitted"
+        :aasm_state => "resubmitted"
       }
   end
 

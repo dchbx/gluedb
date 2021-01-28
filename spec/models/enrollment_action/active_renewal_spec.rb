@@ -226,6 +226,7 @@ describe EnrollmentAction::ActiveRenewal, "#publish" do
       and_return(true)
     allow(action_helper).to receive(:keep_member_ends).with([]).and_return(true)
     allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, 1, 1)
+    allow(action).to receive(:renewal_cancel_policy).and_return([])
   end
 
   it "publishes an event of type active renew" do
@@ -243,5 +244,25 @@ describe EnrollmentAction::ActiveRenewal, "#publish" do
       to receive(:publish_edi).
       with(amqp_connection, action_helper_result_xml, 1, 1)
     subject.publish
+  end
+
+  context "carrier with canceled_renewal_causes_new_coverage" do
+    let(:carrier) { instance_double(Carrier, :canceled_renewal_causes_new_coverage => true) }
+    let(:policy) { instance_double(Policy, :carrier => carrier) }
+
+    before do
+      allow(EnrollmentAction::ActionPublishHelper).
+          to receive(:new).
+                 with(event_xml).and_return(action_helper)
+      allow(action_helper).to receive(:keep_member_ends).with([]).and_return(true)
+      allow(subject).to receive(:publish_edi).with(amqp_connection, action_helper_result_xml, 1, 1)
+      allow(action).to receive(:renewal_cancel_policy).and_return(true)
+      allow(action).to receive(:existing_policy).and_return(policy)
+    end
+
+    it "publishes an event of type initial" do
+      expect(action_helper).to receive(:set_event_action).with("urn:openhbx:terms:v1:enrollment#initial")
+      subject.publish
+    end
   end
 end

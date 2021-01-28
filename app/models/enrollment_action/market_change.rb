@@ -5,6 +5,7 @@ module EnrollmentAction
 
     def self.qualifies?(chunk)
       return false unless chunk.length > 1
+      return false if chunk.last.is_cobra?
       new_market?(chunk)
     end
 

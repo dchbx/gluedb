@@ -4,7 +4,7 @@ module Generators::Reports
   describe IrsInputBuilder do
     subject { IrsInputBuilder.new(policy) }
 
-    let(:policy)     { double(id: 24, subscriber: subscriber, enrollees: [subscriber, dependent1, dependent2], policy_start: policy_start, policy_end: policy_end, plan: plan, eg_id: 212131212, applied_aptc: 0, responsible_party_id: nil, coverage_period: (policy_start..policy_end)) }
+    let(:policy)     { double(id: 24, subscriber: subscriber, enrollees: [subscriber, dependent1, dependent2], policy_start: policy_start, policy_end: policy_end, plan: plan, eg_id: 212131212, applied_aptc: 0, responsible_party_id: nil, coverage_period: (policy_start..policy_end), aptc_credits: aptc_credits) }
     let(:plan)       { double(carrier: carrier, hios_plan_id: '123121') }
     let(:carrier)    { double(name: 'Care First')}
     let(:policy_start) { Date.new(2016, 1, 1) }
@@ -26,7 +26,9 @@ module Generators::Reports
         zip: '20002'
       } 
     }
-
+    let!(:aptc_credits) { [aptc_credit1, aptc_credit2] }
+    let!(:aptc_credit1) { AptcCredit.new(start_on: Date.new(2016, 1, 1), end_on: Date.new(2016, 3, 31), pre_amt_tot:"250.0", tot_res_amt:"50.0", aptc:"100.0") }
+    let!(:aptc_credit2) { AptcCredit.new(start_on: Date.new(2016, 4, 1), end_on: Date.new(2016, 12, 31), pre_amt_tot:"250.0", tot_res_amt:"100.0", aptc:"50.0") }
     let(:mock_disposition) { double(enrollees: policy.enrollees, start_date: policy_start, end_date: policy_end ) }
     let(:mock_policy)      { double(pre_amt_tot: 0.0, ehb_premium: 100.17, applied_aptc: 55.45) }
     let(:carrier_hash)     { {'221212312' => 'Carefirst'} }
@@ -43,6 +45,7 @@ module Generators::Reports
       allow(dependent1).to receive(:canceled?).and_return(false)
       allow(dependent2).to receive(:canceled?).and_return(false)
       allow(address).to receive(:to_hash).and_return(address_hash)
+      allow(mock_disposition).to receive(:policy).and_return(policy)
       allow(mock_disposition).to receive(:as_of).and_return(mock_policy)
 
       subject.carrier_hash = carrier_hash
