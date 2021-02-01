@@ -23,6 +23,7 @@
             %ul.dropdown-menu{:role => "menu"}
               != active_menu_item("Premium Calculator", tools_premium_calc_path)
               != active_menu_item("Vocab Upload", new_vocab_upload_path) if can? :edit, Person
+              != active_menu_item("Payment Processor Upload", new_payment_processor_upload_path) if can? :edit, Person
               != active_menu_item("Transaction errors", errors_edi_transaction_sets_path) if can? :edit, Person
               != active_menu_item("Payment Processor Transactions", legacy_cv_transactions_path) if can? :read, Person
           - if current_user
