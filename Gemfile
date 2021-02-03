@@ -21,6 +21,7 @@ gem "psych", "2.0.5"
 
 group :development do
   gem 'capistrano', '2.15.4'
+  gem 'yard', '0.8.7.6'
 end
 
 group 'development', 'test' do

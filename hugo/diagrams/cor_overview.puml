@@ -1,0 +1,10 @@
+@startuml
+skinparam DefaultFontSize 16
+
+title Process Flow
+(*) --> "Handlers::EnrollmentEventReduceHandler"
+"Handlers::EnrollmentEventReduceHandler" --> "Handlers::EnrollmentEventEnrichHandler"
+"Handlers::EnrollmentEventEnrichHandler" --> "Handlers::EnrollmentEventPersistHandler"
+"Handlers::EnrollmentEventPersistHandler" --> "Handlers::EnrollmentEventPublishHandler"
+"Handlers::EnrollmentEventPublishHandler" --> (*)
+@enduml

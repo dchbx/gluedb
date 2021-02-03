@@ -30,6 +30,8 @@ node_modules
 .idea/
 config/exchange.yml
 spec/vocabularies
+doc/
+.yardoc/
 
 config/settings.local.yml
 config/settings/*.local.yml

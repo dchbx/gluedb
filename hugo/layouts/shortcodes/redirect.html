@@ -1,0 +1,7 @@
+{{ $redirectUrl := .Get 0 }}
+
+<script type="text/javascript">
+  // <!--
+  window.location.replace("{{ safeJS $redirectUrl }}");
+  //-->
+</script>

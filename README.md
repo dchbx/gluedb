@@ -5,17 +5,14 @@
 ##Setup
 
 ###Setup the Rails Project
+
+Some of the gems are private, and you will need to consult devops for access.
+
 ```
 git clone https://github.com/dchbx/gluedb.git
 cd gluedb
 bundle install
 ```
-
-###Setup Flat-UI
-
-This is now done by installing a custom version of the gem from a private repository.
-
-Consult devops for access.
 
 ###Setup Mongodb
 
@@ -34,11 +31,12 @@ Get the mongodb dump (ask a team member). Go to the directory where the dump dir
 ```
 mongorestore
 ```
+
 ### License
 
 The software is available as open source under the terms of the MIT License (MIT)
 
-Copyright (c) 2014-2019 IdeaCrew, Inc.
+Copyright (c) 2014-2021 IdeaCrew, Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

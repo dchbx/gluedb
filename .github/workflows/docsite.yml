@@ -1,0 +1,59 @@
+name: Docs
+on: push
+
+jobs:
+  docs:
+    runs-on: ubuntu-16.04
+    steps:
+      - name: Set up Ruby 2.1.10
+        run: |
+          sudo add-apt-repository -y ppa:brightbox/ruby-ng
+          sudo apt-get -y update
+          sudo apt-get -y install ruby2.1 ruby2.1-dev ruby-switch
+          sudo apt-get -y install ruby-switch
+          sudo ruby-switch --list
+          sudo ruby-switch --set ruby2.1
+      - name: Setup Node.js for use with actions
+        uses: actions/setup-node@v2.1.2
+        with:
+          # Version Spec of the version to use.  Examples: 10.x, 10.15.1, >=10.15.0, lts
+          node-version: '12'
+      - name: install hugo
+        run: sudo snap install hugo --channel=extended
+      - uses: actions/setup-java@v1
+        with:
+          java-version: '8'
+          java-package: jdk
+      - name: Setup Graphviz
+        uses: ts-graphviz/setup-graphviz@v1
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Cache Gems
+        uses: actions/cache@v1
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-gluedb-gems-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-gluedb-gems-${{ hashFiles('**/Gemfile.lock') }}
+      - name: bundle install
+        run: |
+          sudo gem install bundler -v '1.17.3'
+          export BUNDLE_GITHUB__COM=${{ secrets.dchbx_deployments_token }}:x-oauth-basic
+          bundle config path vendor/bundle
+          bundle install
+      - name: build rdoc
+        run: |
+          cp config/exchange.yml.example config/exchange.yml
+          bundle exec yard && cp -rf ./doc ./hugo/static/
+      - name: run hugo
+        run: |
+          cd hugo && npm install && ./build_hugo.sh
+      - uses: nelonoel/branch-name@v1.0.1
+      - uses: jakejarvis/s3-sync-action@master
+        env:
+          AWS_S3_BUCKET: ${{ secrets.YARD_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.YARD_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YARD_SECRET_ACCESS_KEY }}
+          SOURCE_DIR: hugo/public
+          DEST_DIR: ${{ env.BRANCH_NAME }}
