@@ -104,6 +104,7 @@ module EnrollmentAction
           end
         end
       end
+      old_premium_total_amount = event_xml_doc.xpath("//cv:policy/cv:enrollment/cv:premium_total_amount", XML_NS).first.content.to_f
 
       ## copy new total into totals value
       event_xml_doc.xpath("//cv:policy/cv:enrollment/cv:premium_total_amount", XML_NS).each do |node|
@@ -114,9 +115,14 @@ module EnrollmentAction
       employer_contribution = 0
       event_xml_doc.xpath("//cv:policy/cv:enrollment/cv:shop_market", XML_NS).each do |node|
         employer_contribution_path = node.xpath("cv:total_employer_responsible_amount", XML_NS).first
-        employer_contribution = employer_contribution_path.content.to_f
+        old_contribution = employer_contribution_path.content.to_f
+        value = (premium_total * old_contribution)
+        employer_contribution = value > 0 ? (value/old_premium_total_amount).to_f : old_contribution
+
         if (employer_contribution > premium_total)
           employer_contribution = premium_total
+          employer_contribution_path.content = as_dollars(employer_contribution)
+        else
           employer_contribution_path.content = as_dollars(employer_contribution)
         end
       end
