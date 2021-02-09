@@ -175,3 +175,136 @@ describe Parsers::Edi::IncomingTransaction do
     end
   end
 end
+
+describe 'when incoming term/cancel as renewal policy' do
+  let(:eg_id) { '1' }
+  let(:kind) { 'individual' }
+  let(:carrier) {Carrier.create!(:termination_cancels_renewal => true)}
+  let(:plan) { Plan.create!(:name => "test_plan", carrier_id: carrier.id, hios_plan_id: 123 ,:coverage_type => "health", year: Date.today.next_year.year) }
+  let(:active_plan) { Plan.create!(:name => "test_plan", carrier_id: carrier.id, hios_plan_id: 123, renewal_plan: plan, :coverage_type => "health", year: Date.today.year) }
+  let(:catastrophic_active_plan) { Plan.create!(:name => "test_plan", metal_level: 'catastrophic', hios_plan_id: '94506DC0390008', carrier_id: carrier.id, renewal_plan: plan, :coverage_type => "health", year: Date.today.year) }
+  let!(:primary) {
+    person = FactoryGirl.create :person
+    person.update(authority_member_id: person.members.first.hbx_member_id)
+    person
+  }
+  let(:coverage_start) { Date.today.next_year.beginning_of_year }
+  let(:enrollee) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: Date.today.beginning_of_month, coverage_end:  coverage_end)}
+  let(:enrollee2) { Enrollee.new(m_id: primary.authority_member.hbx_member_id, rel_code: 'self', coverage_start: Date.today.next_year.beginning_of_year)}
+
+  let!(:active_policy) {
+    policy = FactoryGirl.create(:policy, enrollment_group_id: eg_id,
+                                hbx_enrollment_ids: ["123"], carrier: carrier,
+                                plan: active_plan,
+                                coverage_start: Date.today.beginning_of_month, kind: kind)
+    policy.update_attributes(enrollees: [enrollee], hbx_enrollment_ids: ["123"])
+    policy.save
+    policy
+  }
+  let!(:renewal_policy) {
+    policy = FactoryGirl.create(:policy, enrollment_group_id: eg_id, carrier: carrier, plan: plan,
+                                coverage_start: Date.today.next_year.beginning_of_year, kind: kind)
+    policy.update_attributes(enrollees: [enrollee2])
+    policy.save
+    policy
+  }
+
+  let(:policy_loop) { double(id: '4321', action: :stop, coverage_end: coverage_end.strftime("%Y%m%d")) }
+  let(:person_loop) { instance_double(Parsers::Edi::Etf::PersonLoop, member_id: enrollee.m_id, carrier_member_id: carrier.id, policy_loops: [policy_loop], :non_payment_change? => false) }
+  let(:etf) { double(people: [person_loop], is_shop?: false) }
+  let(:incoming) do
+    incoming = Parsers::Edi::IncomingTransaction.new(etf)
+    incoming.policy_found(active_policy)
+    incoming
+  end
+  let(:event_broadcaster) { instance_double(Amqp::EventBroadcaster) }
+
+  context "cancel policy" do
+    let!(:coverage_end) { Date.today.beginning_of_month }
+
+    before :each do
+      allow(Amqp::EventBroadcaster).to receive(:with_broadcaster).and_yield(event_broadcaster)
+      allow(event_broadcaster).to receive(:broadcast).with({:routing_key => "info.events.policy.canceled",
+                                                               :headers => {
+                                                                   :resource_instance_uri => active_policy.eg_id,
+                                                                   :event_effective_date => active_policy.policy_end.strftime("%Y%m%d"),
+                                                                   :hbx_enrollment_ids => JSON.dump(active_policy.hbx_enrollment_ids)
+                                                               }
+                                                           }, "")
+      allow(Observers::PolicyUpdated).to receive(:notify).with(active_policy)
+    end
+
+    it "broadcasts the cancel" do
+      expect(event_broadcaster).to receive(:broadcast).with({:routing_key => "info.events.policy.canceled",
+                                                                :headers => {
+                                                                    :resource_instance_uri => active_policy.eg_id,
+                                                                    :event_effective_date => active_policy.policy_end.strftime("%Y%m%d"),
+                                                                    :hbx_enrollment_ids => JSON.dump(active_policy.hbx_enrollment_ids)
+                                                                }
+                                                            }, "")
+      incoming.import
+    end
+
+    it 'sets the policy to canceled' do
+      incoming.import
+      expect(active_policy.canceled?).to eq true
+    end
+
+    it 'notifies of policy cancelation' do
+      expect(Observers::PolicyUpdated).to receive(:notify).with(active_policy)
+      incoming.import
+    end
+
+    it 'should cancel renewal' do
+      incoming.import
+      expect(active_policy.canceled?).to eq true
+      renewal_policy.reload
+      expect(renewal_policy.canceled?).to eq true
+    end
+  end
+
+  context "term policy" do
+    let(:coverage_end) {  Date.today.next_year.beginning_of_year - 1.day }
+
+    before :each do
+      allow(Amqp::EventBroadcaster).to receive(:with_broadcaster).and_yield(event_broadcaster)
+      allow(event_broadcaster).to receive(:broadcast).with({:routing_key => "info.events.policy.terminated",
+                                                               :headers => {
+                                                                   :resource_instance_uri => active_policy.eg_id,
+                                                                   :event_effective_date => active_policy.policy_end.strftime("%Y%m%d"),
+                                                                   :hbx_enrollment_ids => JSON.dump(active_policy.hbx_enrollment_ids)
+                                                               }
+                                                           }, "")
+
+      allow(Observers::PolicyUpdated).to receive(:notify).with(active_policy)
+    end
+
+    it "broadcasts the terminate" do
+      expect(event_broadcaster).to receive(:broadcast).with({:routing_key => "info.events.policy.terminated",
+                                                                :headers => {
+                                                                    :resource_instance_uri => active_policy.eg_id,
+                                                                    :event_effective_date => active_policy.policy_end.strftime("%Y%m%d"),
+                                                                    :hbx_enrollment_ids => JSON.dump(active_policy.hbx_enrollment_ids)
+                                                                }
+                                                            }, "")
+      incoming.import
+    end
+
+    it 'sets the policy to terminated' do
+      incoming.import
+      expect(active_policy.terminated?).to eq true
+    end
+
+    it 'notifies of policy cancelation' do
+      expect(Observers::PolicyUpdated).to receive(:notify).with(active_policy)
+      incoming.import
+    end
+
+    it 'should cancel renewal' do
+      incoming.import
+      expect(active_policy.terminated?).to eq true
+      renewal_policy.reload
+      expect(renewal_policy.canceled?).to eq true
+    end
+  end
+end
