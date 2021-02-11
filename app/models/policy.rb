@@ -966,6 +966,24 @@ class Policy
     end
   end
 
+  def self.change_npt_indicator(policy, npt_indicator)
+    if (npt_indicator == "true") && (policy.term_for_np == false)
+      if ["terminated", "canceled"].include?(policy.aasm_state)
+        policy.update_attributes!(term_for_np: true)
+        Observers::PolicyUpdated.notify(policy)
+        {notice: "Successfully updated NPT indicator value to '#{npt_indicator}'"}
+      else
+        {notice: "Policy is not in termination state cannot update NPT indicator value to '#{npt_indicator}'"}
+      end
+    elsif (npt_indicator == "false") && (policy.term_for_np == true)
+      policy.update_attributes!(term_for_np: false)
+      Observers::PolicyUpdated.notify(policy)
+      {notice: "Successfully updated NPT indicator value to '#{npt_indicator}'"}
+    else
+      {notice: "NPT indicator cannot update to '#{npt_indicator}' because policy NPT indicator has same value"}
+    end
+  end
+
   protected
   def generate_enrollment_group_id
     self.eg_id = self.eg_id || self._id.to_s

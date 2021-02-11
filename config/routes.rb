@@ -102,6 +102,7 @@ Gluedb::Application.routes.draw do
     member do
       get :cancelterminate
       post :transmit
+      put :change_npt_indicator
       get :generate_tax_document_form
       post :generate_tax_document
       get :download_tax_document

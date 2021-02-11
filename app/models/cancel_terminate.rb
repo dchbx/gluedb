@@ -16,7 +16,7 @@ class CancelTerminate
   attr_accessor :policy_id
   attr_accessor :operation, :reason, :benefit_end_date
   attr_accessor :people
-  attr_accessor :policy
+  attr_accessor :policy, :npt_indicator
 
   validate :term_date_valid?, :unless => :is_cancel?
   validate :selected_at_least_one?

@@ -908,3 +908,71 @@ describe "#cancel_renewal", :dbclean => :after_each do
     end
   end
 end
+
+describe ".change_npt_indicator", :dbclean => :after_each do
+  let(:coverage_start) { Date.new(2014, 1, 1) }
+  let(:enrollee) { build(:subscriber_enrollee, coverage_start: coverage_start) }
+  let(:policy1) { build(:policy, enrollees: [ enrollee ], term_for_np: true) }
+  let(:policy2) { build(:policy, enrollees: [ enrollee ], term_for_np: false) }
+  let(:policy3) { FactoryGirl.create(:policy, term_for_np: false, aasm_state: 'submitted') }
+  let(:true_npt) {"true"}
+  let(:false_npt) {"false"}
+  let(:true_warning_message) {"NPT indicator cannot update to 'true' because policy NPT indicator has same value"}
+  let(:true_success_meesage) {"Successfully updated NPT indicator value to 'true'"}
+  let(:false_warning_message) {"NPT indicator cannot update to 'false' because policy NPT indicator has same value"}
+  let(:false_success_meesage) {"Successfully updated NPT indicator value to 'false'"}
+  let(:error_message) {"Policy is not in termination state cannot update NPT indicator value to 'true'"}
+  before { policy1.save! }
+  before {policy2.save!}
+
+  before :each do
+    allow(Observers::PolicyUpdated).to receive(:notify).with(policy1)
+  end
+
+  context 'when policy term_for_np value is changing to true' do
+    context 'when policy is in terminated state' do
+      it 'return true warning message when policy term_for_np is already true' do
+        allow(Observers::PolicyUpdated).to receive(:notify).with(policy1)
+        npt_value = Policy.change_npt_indicator(policy1, true_npt)
+        expect(policy1.aasm_state).to eq "terminated"
+        expect(npt_value[:notice]).to eq true_warning_message
+      end
+
+      it 'return true success message' do
+        allow(Observers::PolicyUpdated).to receive(:notify).with(policy2)
+        npt_value = Policy.change_npt_indicator(policy2, true_npt)
+        expect(policy2.aasm_state).to eq "terminated"
+        expect(npt_value[:notice]).to eq true_success_meesage
+      end
+    end
+
+    context 'when policy is in submitted state' do
+      it 'return error message' do
+        allow(Observers::PolicyUpdated).to receive(:notify).with(policy3)
+        npt_value = Policy.change_npt_indicator(policy3, true_npt)
+        expect(policy3.aasm_state).to eq "submitted"
+        expect(npt_value[:notice]).to eq error_message
+      end
+    end
+  end
+
+  context 'when policy term_for_np value is changing to false' do
+    context 'when policy is in terminated state' do
+      it 'return false success message' do
+        allow(Observers::PolicyUpdated).to receive(:notify).with(policy1)
+        npt_value = Policy.change_npt_indicator(policy1, false_npt)
+        expect(policy1.aasm_state).to eq "terminated"
+        expect(npt_value[:notice]).to eq false_success_meesage
+      end
+    end
+
+    context 'when policy is in submitted state' do
+      it 'return false warning message when policy term_for_np is already false' do
+        allow(Observers::PolicyUpdated).to receive(:notify).with(policy3)
+        npt_value = Policy.change_npt_indicator(policy3, false_npt)
+        expect(policy3.aasm_state).to eq "submitted"
+        expect(npt_value[:notice]).to eq false_warning_message
+      end
+    end
+  end
+end
