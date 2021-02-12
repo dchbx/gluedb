@@ -423,7 +423,7 @@ module ExternalEvents
         ['94506DC0390008','86052DC0400004'].include?(active_plan.hios_plan_id.split("-").first) &&
             (['94506DC0390010','86052DC0400010'].include?(renewal_plan.hios_plan_id.split("-").first) || active_plan.renewal_plan == renewal_plan)
       else
-        (active_plan.renewal_plan == renewal_plan || active_plan.renewal_plan.hios_plan_id.split("-").first == renewal_plan.hios_plan_id.split("-").first)
+        (active_plan.renewal_plan == renewal_plan || (active_plan.renewal_plan.present? && active_plan.renewal_plan.hios_plan_id.split("-").first == renewal_plan.hios_plan_id.split("-").first))
       end
     end
 
