@@ -6,3 +6,7 @@ showToc = true
 relativeURLs = true
 disableKinds = ["taxonomy", "term"]
 staticDir = ["static", "diagrams"]
+
+[markup]
+  [markup.tableOfContents]
+    ordered = false
