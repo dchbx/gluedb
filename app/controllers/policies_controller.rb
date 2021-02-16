@@ -57,9 +57,9 @@ class PoliciesController < ApplicationController
   end
 
   def change_npt_indicator
-    npt_indicator = params[:policy][:npt_indicator]
+    altered_npt_indicator = params[:policy][:npt_indicator]
     policy = Policy.find(params[:policy][:id])
-    message = Policy.change_npt_indicator(policy, npt_indicator)
+    message = Policy.change_npt_indicator(policy, altered_npt_indicator, current_user.email)
     redirect_to cancelterminate_policy_path({ :id => params[:policy][:id]}), flash: message
   end
 
