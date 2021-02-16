@@ -1,0 +1,17 @@
+%ul.breadcrumb
+  NPT Indicator
+= form_for policy, url: change_npt_indicator_policy_path(policy.id) do |f|
+  .panel.panel-default
+    .panel-body
+      = f.hidden_field :id, value: policy.id
+      .row
+        .col-md-12
+          .control-group
+            = f.radio_button :npt_indicator, true, checked: policy.term_for_np
+            = f.label true
+            = f.radio_button :npt_indicator, false, checked: (policy.term_for_np == false)
+            = f.label false
+      .row
+        .col-md-2
+          .form_actions
+            = f.submit 'Submit', class: 'btn btn-inverse', confirm: 'WARNING: This action will change the policy term_for_np value. Are you sure you want to continue?'

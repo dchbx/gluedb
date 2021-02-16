@@ -966,6 +966,44 @@ class Policy
     end
   end
 
+  def self.change_npt_indicator(policy, altered_npt_indicator, submitted_by)
+    old_npt = policy.term_for_np
+    if (altered_npt_indicator == "true") && (policy.term_for_np == false)
+      if ["terminated", "canceled"].include?(policy.aasm_state)
+        policy.update_attributes!(term_for_np: true)
+        Observers::PolicyUpdated.notify(policy)
+        log_npt_altering(policy, old_npt, submitted_by)
+        {notice: "Successfully updated NPT indicator value to '#{altered_npt_indicator}'"}
+      else
+        {notice: "Policy is not in termination state cannot update NPT indicator value to '#{altered_npt_indicator}'"}
+      end
+    elsif (altered_npt_indicator == "false") && (policy.term_for_np == true)
+      policy.update_attributes!(term_for_np: false)
+      Observers::PolicyUpdated.notify(policy)
+      log_npt_altering(policy, old_npt, submitted_by)
+      {notice: "Successfully updated NPT indicator value to '#{altered_npt_indicator}'"}
+    else
+      {notice: "NPT indicator cannot update to '#{altered_npt_indicator}' because policy NPT indicator has same value"}
+    end
+  end
+
+  def self.log_npt_altering(policy, old_npt, submitted_by)
+    broadcast_info = {
+      :routing_key => "info.events.policy.non_payment_indicator_altered",
+      :app_id => "gluedb",
+      :headers => {
+        "policy_id" =>  policy.id,
+        "eg_id" => policy.eg_id,
+        "old_npt" => old_npt,
+        "new_npt" => policy.term_for_np,
+        "submitted_by"  => submitted_by
+      }
+    }
+    Amqp::EventBroadcaster.with_broadcaster do |eb|
+      eb.broadcast(broadcast_info, policy.id)
+    end
+  end
+
   protected
   def generate_enrollment_group_id
     self.eg_id = self.eg_id || self._id.to_s

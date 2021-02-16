@@ -50,3 +50,5 @@
         .col-md-2
           = f.label "Transmit?"
           = f.check_box :transmit, checked: true
+
+= render 'policies/change_npt_indicator', policy: @policy

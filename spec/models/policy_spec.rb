@@ -908,3 +908,106 @@ describe "#cancel_renewal", :dbclean => :after_each do
     end
   end
 end
+
+describe ".change_npt_indicator", :dbclean => :after_each do
+  let(:submitted_by) {"admin@dc.gov"}
+  let(:coverage_start) { Date.new(2014, 1, 1) }
+  let(:enrollee) { build(:subscriber_enrollee, coverage_start: coverage_start) }
+  let(:policy1) { build(:policy, enrollees: [ enrollee ], term_for_np: true) }
+  let(:policy2) { build(:policy, enrollees: [ enrollee ], term_for_np: false) }
+  let(:policy3) { FactoryGirl.create(:policy, term_for_np: false, aasm_state: 'submitted') }
+  let(:true_npt) {"true"}
+  let(:false_npt) {"false"}
+  let(:true_warning_message) {"NPT indicator cannot update to 'true' because policy NPT indicator has same value"}
+  let(:true_success_meesage) {"Successfully updated NPT indicator value to 'true'"}
+  let(:false_warning_message) {"NPT indicator cannot update to 'false' because policy NPT indicator has same value"}
+  let(:false_success_meesage) {"Successfully updated NPT indicator value to 'false'"}
+  let(:error_message) {"Policy is not in termination state cannot update NPT indicator value to 'true'"}
+  let(:mock_event_broadcaster) do
+    instance_double(Amqp::EventBroadcaster)
+  end
+  before { policy1.save! }
+  before {policy2.save!}
+
+  before :each do
+    allow(Observers::PolicyUpdated).to receive(:notify).with(policy1)
+    allow(Amqp::EventBroadcaster).to receive(:with_broadcaster).and_yield(mock_event_broadcaster)
+  end
+
+  context 'when policy term_for_np value is changing to true' do
+    context 'when policy is in terminated state' do
+      it 'return true warning message when policy term_for_np is already true' do
+        allow(Observers::PolicyUpdated).to receive(:notify).with(policy1)
+        npt_value = Policy.change_npt_indicator(policy1, true_npt, submitted_by)
+        expect(policy1.aasm_state).to eq "terminated"
+        expect(npt_value[:notice]).to eq true_warning_message
+      end
+
+      it 'return true success message' do
+        old_npt = policy2.term_for_np
+        allow(Observers::PolicyUpdated).to receive(:notify).with(policy2)
+        allow(mock_event_broadcaster).to receive(:broadcast).with(
+          {
+            :routing_key => "info.events.policy.non_payment_indicator_altered",
+            :app_id => "gluedb",
+            :headers => {
+              "policy_id" =>  policy2.id,
+              "eg_id" => policy2.eg_id,
+              "old_npt" => old_npt,
+              "new_npt" => true,
+              "submitted_by"  => submitted_by
+            }
+          },
+          policy2.id
+        )
+        npt_value = Policy.change_npt_indicator(policy2, true_npt, submitted_by)
+        expect(policy2.aasm_state).to eq "terminated"
+        expect(npt_value[:notice]).to eq true_success_meesage
+      end
+    end
+
+    context 'when policy is in submitted state' do
+      it 'return error message' do
+        allow(Observers::PolicyUpdated).to receive(:notify).with(policy3)
+        npt_value = Policy.change_npt_indicator(policy3, true_npt, submitted_by)
+        expect(policy3.aasm_state).to eq "submitted"
+        expect(npt_value[:notice]).to eq error_message
+      end
+    end
+  end
+
+  context 'when policy term_for_np value is changing to false' do
+    context 'when policy is in terminated state' do
+      it 'return false success message' do
+        old_npt = policy1.term_for_np
+        allow(Observers::PolicyUpdated).to receive(:notify).with(policy1)
+        allow(mock_event_broadcaster).to receive(:broadcast).with(
+          {
+            :routing_key => "info.events.policy.non_payment_indicator_altered",
+            :app_id => "gluedb",
+            :headers => {
+              "policy_id" =>  policy1.id,
+              "eg_id" => policy1.eg_id,
+              "old_npt" => old_npt,
+              "new_npt" => false,
+              "submitted_by"  => submitted_by
+            }
+          },
+          policy1.id
+        )
+        npt_value = Policy.change_npt_indicator(policy1, false_npt, submitted_by)
+        expect(policy1.aasm_state).to eq "terminated"
+        expect(npt_value[:notice]).to eq false_success_meesage
+      end
+    end
+
+    context 'when policy is in submitted state' do
+      it 'return false warning message when policy term_for_np is already false' do
+        allow(Observers::PolicyUpdated).to receive(:notify).with(policy3)
+        npt_value = Policy.change_npt_indicator(policy3, false_npt, submitted_by)
+        expect(policy3.aasm_state).to eq "submitted"
+        expect(npt_value[:notice]).to eq false_warning_message
+      end
+    end
+  end
+end
