@@ -867,8 +867,10 @@ class Policy
     updated_or_created_policy.save!
 
     unless policy_eligible_to_notify?(updated_or_created_policy) #if true then we don't want to notify
-      unless transaction_type.include?(:stop) && termination_event_exempt_from_notification?(before_updated_policy, updated_or_created_policy)
-        Observers::PolicyUpdated.notify(updated_or_created_policy) #notify to generate H41's && 1095A's
+      unless transaction_set_kind == "effectuation"
+        unless transaction_type.include?(:stop) && termination_event_exempt_from_notification?(before_updated_policy, updated_or_created_policy)
+          Observers::PolicyUpdated.notify(updated_or_created_policy) #notify to generate H41's && 1095A's
+        end
       end
     end
     updated_or_created_policy
