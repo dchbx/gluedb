@@ -79,6 +79,11 @@ module Parsers
         unless exempt_from_notification?(@policy, is_policy_cancel, is_policy_term, old_npt_flag == is_non_payment)
           Observers::PolicyUpdated.notify(@policy)
         end
+
+        if is_policy_term || is_policy_cancel
+          @policy.cancel_ivl_renewal
+        end
+
         if is_policy_term
           # Broadcast the term
           reason_headers = if is_non_payment
