@@ -263,11 +263,11 @@ describe EnrollmentAction::ActionPublishHelper, "SHOP: recalculating premium tot
   end
 
   it "recalculates the correct total_responsible_amount" do
-    expect(total_responsible_amount_xpath.content).to eq("15.0")
+    expect(total_responsible_amount_xpath.content).to eq("76.67")
   end
 
   it "leaves the total employer responsible amount unchanged" do
-    expect(total_employer_responsible_amount_xpath.content).to eq("185.00")
+    expect(total_employer_responsible_amount_xpath.content).to eq("123.33")
   end
 
   it "is shop" do
@@ -275,13 +275,88 @@ describe EnrollmentAction::ActionPublishHelper, "SHOP: recalculating premium tot
   end
 
   context "with an original employer contribution greater than the adjusted total" do
-    let(:total_employer_responsible_amount) { '250.00' }
+    let(:total_employer_responsible_amount) { '300.00' }
     it "recalculates the contribution to be no greater than the total premium" do
       expect(total_employer_responsible_amount_xpath.content).to eq("200.0")
     end
     it "sets the correct total_responsible_amount value" do
       expect(total_responsible_amount_xpath.content).to eq('0.0')
     end
+  end
+end
+
+
+describe EnrollmentAction::ActionPublishHelper, "SHOP: recalculating premium totals after a dependent drop and total employer contribution less than premium" do
+  let(:primary_member_id) { "1000" }
+  let(:secondary_member_id) { "1001" }
+  let(:dropped_member_id) { "1002" }
+  let(:xml_namespace) { { :cv => "http://openhbx.org/api/terms/1.0" } }
+  let(:premium_amount1) { '439.99' }
+  let(:premium_amount2) { '462.57' }
+  let(:total_employer_responsible_amount) { '676.92' }
+  let(:premium_total_amount) { '902.56' }
+  let(:dependent_drop_event) { <<-EVENTXML
+    <enrollment xmlns="http://openhbx.org/api/terms/1.0">
+      <policy>
+        <enrollees>
+          <enrollee>
+            <member>
+              <id>
+                <id>urn:openhbx:hbx:dc0:resources:v1:person:hbx_id##{primary_member_id}</id>
+              </id>
+            </member>
+            <benefit>
+              <premium_amount>#{premium_amount1}</premium_amount>
+            </benefit>
+          </enrollee>
+          <enrollee>
+            <member>
+              <id>
+                <id>urn:openhbx:hbx:dc0:resources:v1:person:hbx_id##{dropped_member_id}</id>
+              </id>
+            </member>
+            <benefit>
+              <premium_amount>#{premium_amount2}</premium_amount>
+            </benefit>
+          </enrollee>
+        </enrollees>
+      <enrollment>
+        <shop_market>
+          <total_employer_responsible_amount>#{total_employer_responsible_amount}</total_employer_responsible_amount>
+        </shop_market>
+         <premium_total_amount>#{premium_total_amount}</premium_total_amount>
+        <total_responsible_amount>125.00</total_responsible_amount>
+      </enrollment>
+    </policy>
+  </enrollment>
+  EVENTXML
+  }
+
+  let(:publish_helper) { ::EnrollmentAction::ActionPublishHelper.new(dependent_drop_event) }
+
+  let(:target_xml_doc) {
+    publish_helper.recalculate_premium_totals_excluding_dropped_dependents([primary_member_id])
+    Nokogiri::XML(publish_helper.to_xml)
+  }
+
+  let(:premium_total_xpath) { target_xml_doc.xpath("//cv:enrollment/cv:policy/cv:enrollment/cv:premium_total_amount", xml_namespace).first }
+  let(:total_responsible_amount_xpath) { target_xml_doc.xpath("//cv:enrollment/cv:policy/cv:enrollment/cv:total_responsible_amount", xml_namespace).first }
+  let(:total_employer_responsible_amount_xpath) { target_xml_doc.xpath("//cv:enrollment/cv:policy/cv:enrollment/cv:shop_market/cv:total_employer_responsible_amount", xml_namespace).first }
+
+  it "recalculates the correct total excluding the dropped member" do
+    expect(premium_total_xpath.content).to eq("439.99")
+  end
+
+  it "recalculates the correct total_responsible_amount" do
+    expect(total_responsible_amount_xpath.content).to eq("110.0")
+  end
+
+  it "leaves the total employer responsible amount unchanged" do
+    expect(total_employer_responsible_amount_xpath.content).to eq("329.99")
+  end
+
+  it "is shop" do
+    expect(publish_helper.is_shop?).to be_truthy
   end
 end
 
