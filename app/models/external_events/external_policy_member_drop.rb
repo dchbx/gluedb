@@ -161,8 +161,18 @@ module ExternalEvents
                          end
     end
 
+    def populate_aptc_credit_changes(policy)
+        new_aptc_date = policy.enrollees.map(&:coverage_end).uniq.compact.sort.last + 1.day
+        tot_res_amt = extract_tot_res_amt
+        pre_amt_tot = extract_pre_amt_tot
+        aptc_amt = extract_aptc_amount
+        policy.set_aptc_effective_on(new_aptc_date, aptc_amt, pre_amt_tot, tot_res_amt)
+        policy.save!
+    end
+
     def persist
       pol = policy_to_update
+      existing_aptc = pol.applied_aptc
       pol.update_attributes!({
         :pre_amt_tot => extract_pre_amt_tot,
         :tot_res_amt => extract_tot_res_amt
@@ -175,6 +185,7 @@ module ExternalEvents
       unless all_terminations_exempt?(pol, @policy_node)
         Observers::PolicyUpdated.notify(pol)
       end
+      populate_aptc_credit_changes(pol) if existing_aptc != extract_aptc_amount && !pol.is_shop?
       true
     end
 
