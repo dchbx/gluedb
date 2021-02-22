@@ -15,13 +15,13 @@ benefit_coverage_renewal_application_eligible
 benefit_coverage_renewal_carrier_dropped
 benefit_coverage_period_terminated_voluntary
 benefit_coverage_period_terminated_nonpayment
+benefit_coverage_period_reinstated
     )
 
     EXCLUDED_FOR_NOW = %w(
 benefit_coverage_renewal_terminated_voluntary
 benefit_coverage_period_terminated_relocated
 benefit_coverage_renewal_terminated_ineligible
-benefit_coverage_period_reinstated
     )
 
     FIRST_TIME_EMPLOYER_EVENT_NAME = "benefit_coverage_initial_application_eligible"

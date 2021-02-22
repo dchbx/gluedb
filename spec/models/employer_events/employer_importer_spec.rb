@@ -306,3 +306,46 @@ describe EmployerEvents::EmployerImporter, "for an existing employer with one ov
     subject.persist
   end
 end
+
+describe EmployerEvents::EmployerImporter, "for an existing employer, update reinstated plan year end date", :dbclean => :after_each do
+  let(:start_date) {Date.today.beginning_of_month.prev_year}
+  let(:end_date) {start_date + 1.year - 1.day}
+
+  let(:employer_event_xml) do
+    <<-XML_CODE
+      <organization xmlns="http://openhbx.org/api/terms/1.0">
+      <id>
+      <id>1234</id>
+      </id>
+      <name>TEST NAME</name>
+      <dba>TEST DBA</name>
+      <fein>123456789</fein>
+      <employer_profile>
+        <plan_years>
+          <plan_year>
+            <plan_year_start>#{start_date.strftime("%Y%m%d")}</plan_year_start>
+            <plan_year_end>#{end_date.strftime("%Y%m%d")}</plan_year_end>
+          </plan_year>
+
+        </plan_years>
+      </employer_profile>
+      </organization>
+    XML_CODE
+  end
+  let(:employer) { FactoryGirl.create(:employer, hbx_id: "1234")}
+  let!(:plan_year) { FactoryGirl.create(:plan_year, employer: employer,start_date: start_date, end_date: end_date - 2.months)}
+  subject { EmployerEvents::EmployerImporter.new(employer_event_xml) }
+
+  before do
+    subject.persist
+    plan_year.reload
+  end
+
+  it "should update the employer plan year with new end date" do
+    expect(plan_year.end_date).to eq end_date
+  end
+
+  it "should not create new plan year" do
+    expect(employer.plan_years.count).to eq 1
+  end
+end

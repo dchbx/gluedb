@@ -447,8 +447,6 @@ describe EmployerEvents::Renderer, "given an termianation xml, with an nonpaymen
     XMLCODE
   end
 
-
-
   describe "with plan years for the specified carrier, with benefit_coverage_period_terminated_voluntary event" do
 
     let(:employer_event) { instance_double(EmployerEvent, {:event_time => event_time, :event_name => "benefit_coverage_period_terminated_voluntary", :resource_body => source_document}) }
@@ -496,6 +494,75 @@ describe EmployerEvents::Renderer, "given an termianation xml, with an nonpaymen
 
     it "should return false " do
       expect(subject.has_current_or_future_plan_year?(carrier)).to be_falsey
+    end
+
+    it "should return false" do
+      expect(subject.drop_and_has_future_plan_year?(carrier)).to be_falsey
+    end
+
+    it "should return false" do
+      expect(subject.renewal_and_no_future_plan_year?(carrier)).to be_falsey
+    end
+  end
+end
+
+describe EmployerEvents::Renderer, "given an reinstate xml, with an benefit_coverage_period_reinstated" do
+  let(:event_time) { double }
+  let(:carrier) { instance_double(Carrier, :hbx_carrier_id => hbx_carrier_id) }
+
+  let(:source_document) do
+    <<-XMLCODE
+		<plan_years xmlns="http://openhbx.org/api/terms/1.0">
+
+      <plan_year>
+				<plan_year_start>#{plan_year_start.strftime("%Y%m%d")}</plan_year_start>
+				<plan_year_end>#{plan_year_end.strftime("%Y%m%d")}</plan_year_end>
+				<open_enrollment_start>20151013</open_enrollment_start>
+				<open_enrollment_end>20151110</open_enrollment_end>
+				<benefit_groups>
+					<benefit_group>
+						<name>Health Insurance</name>
+						<elected_plans>
+							<elected_plan>
+								<id>
+									<id>A HIOS ID</id>
+								</id>
+								<name>A PLAN NAME</name>
+								<active_year>2015</active_year>
+								<is_dental_only>false</is_dental_only>
+								<carrier>
+									<id>
+										<id>1</id>
+									</id>
+									<name>A CARRIER NAME</name>
+								</carrier>
+							</elected_plan>
+						</elected_plans>
+					</benefit_group>
+				</benefit_groups>
+       </plan_year>
+     </plan_years>
+    XMLCODE
+  end
+
+  describe "with plan years for the specified carrier, with benefit_coverage_period_reinstated event" do
+
+    let(:employer_event) { instance_double(EmployerEvent, {:event_time => event_time, :event_name => "benefit_coverage_period_reinstated", :resource_body => source_document}) }
+
+    subject do
+      EmployerEvents::Renderer.new(employer_event)
+    end
+
+    let(:hbx_carrier_id) { 1 }
+    let(:plan_year_start) { Date.today.beginning_of_year }
+    let(:plan_year_end) { Date.today.end_of_year  }
+
+    it "should return true if terminated plan year present" do
+      expect(subject.should_send_retroactive_term_or_cancel?(carrier)).to be_falsey
+    end
+
+    it "should return false " do
+      expect(subject.has_current_or_future_plan_year?(carrier)).to be_truthy
     end
 
     it "should return false" do
