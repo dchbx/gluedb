@@ -32,13 +32,14 @@ class VocabUploadsController < ApplicationController
     flash_message_now(:error, "premium_amount_total is incorrect. " + details_text(details))
   end
 
-  def enrollee_has_incorrect_premium(details)
-    flash_message_now(:error, "#{details[:name]}'s premium_amount is incorrect. " + details_text(details))
-  end
+  # Premium validator check has been removed
+  # def enrollee_has_incorrect_premium(details)
+  #   flash_message_now(:error, "#{details[:name]}'s premium_amount is incorrect. " + details_text(details))
+  # end
 
-  def premium_not_found
-    flash_message_now(:error, "Premium was not found in the system.")
-  end
+  # def premium_not_found
+  #   flash_message_now(:error, "Premium was not found in the system.")
+  # end
 
   def details_text(details)
     "Expected $#{sprintf "%.2f", details[:expected]} but got $#{sprintf "%.2f", details[:provided]}."

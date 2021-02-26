@@ -1,6 +1,7 @@
 GIT
-  remote: https://github.com/dchbx/designmodo-flatuipro-rails.git
+  remote: https://github.com/ideacrew/designmodo-flatuipro-rails.git
   revision: cf4e651a49bb3ba712efd90531d864a294616914
+  branch: trunk
   specs:
     designmodo-flatuipro-rails (1.3.0.0.branch)
       jquery-rails (>= 3.1.1)
@@ -8,7 +9,7 @@ GIT
       less-rails-bootstrap (>= 3.2.0)
 
 GIT
-  remote: https://github.com/dchbx/edi_codec.git
+  remote: https://github.com/ideacrew/edi_codec.git
   revision: bbd593e0312c7e9992bc0491d5bf7ce56ef61f7a
   specs:
     edi_codec (0.1.2)
@@ -16,16 +17,18 @@ GIT
       nokogiri (~> 1.6)
 
 GIT
-  remote: https://github.com/dchbx/openhbx_cv2.git
-  revision: b2b71b74190f75c23098634fe609dbd6a14050e7
+  remote: https://github.com/ideacrew/openhbx_cv2.git
+  revision: 6567dd46112982e6a9c90001b617caf313271fc9
+  branch: trunk
   specs:
     openhbx_cv2 (0.0.1)
       activesupport (>= 3.2)
       nokogiri-happymapper (~> 0.5)
 
 GIT
-  remote: https://github.com/dchbx/ruby-middleware.git
-  revision: 8c787fbd14b6c7e6f177a0069762bc1669b6fe5d
+  remote: https://github.com/ideacrew/ruby-middleware.git
+  revision: 1c324903951337faf2116f20ec0df9ec13ddd781
+  branch: trunk
   specs:
     ibsciss-middleware (0.4.0)
 

@@ -66,21 +66,22 @@ feature 'uploading individual CV', :dbclean => :after_each do
     expect(page).not_to have_content 'Uploaded successfully.'
   end
 
-  scenario 'enrollee\'s premium is incorrect' do
-    visit new_vocab_upload_path
+# Premium validator check has been removed
+  # scenario 'enrollee\'s premium is incorrect' do
+  #   visit new_vocab_upload_path
 
-    choose 'Initial Enrollment'
-    fill_in "vocab_upload[redmine_ticket]", with: "1234"
+  #   choose 'Initial Enrollment'
+  #   fill_in "vocab_upload[redmine_ticket]", with: "1234"
 
-    file_path = Rails.root + "spec/support/fixtures/individual_enrollment/incorrect_premium.xml"
-    attach_file('vocab_upload_vocab', file_path)
+  #   file_path = Rails.root + "spec/support/fixtures/individual_enrollment/incorrect_premium.xml"
+  #   attach_file('vocab_upload_vocab', file_path)
 
-    click_button "Upload"
+  #   click_button "Upload"
 
-    expect(page).to have_content 'premium_amount is incorrect'
-    expect(page).to have_content 'Failed to Upload.'
+  #   expect(page).to have_content 'premium_amount is incorrect'
+  #   expect(page).to have_content 'Failed to Upload.'
 
-  end
+  # end
 
   scenario 'premium amount total is incorrect' do
     visit new_vocab_upload_path
@@ -112,21 +113,22 @@ feature 'uploading individual CV', :dbclean => :after_each do
     expect(page).to have_content 'Failed to Upload.'
   end
 
-  feature 'Handling premium not found error' do
-    given(:premium) { nil }
-    scenario 'premium table is not in the system' do
-      visit new_vocab_upload_path
+  # Premium validator check has been removed
+  # feature 'Handling premium not found error' do
+  #   given(:premium) { nil }
+  #   scenario 'premium table is not in the system' do
+  #     visit new_vocab_upload_path
 
-      choose 'Initial Enrollment'
-      fill_in "vocab_upload[redmine_ticket]", with: "1234"
+  #     choose 'Initial Enrollment'
+  #     fill_in "vocab_upload[redmine_ticket]", with: "1234"
 
-      file_path = Rails.root + "spec/support/fixtures/individual_enrollment/correct.xml"
-      attach_file('vocab_upload_vocab', file_path)
+  #     file_path = Rails.root + "spec/support/fixtures/individual_enrollment/correct.xml"
+  #     attach_file('vocab_upload_vocab', file_path)
 
-      click_button "Upload"
+  #     click_button "Upload"
 
-      expect(page).to have_content 'Premium was not found in the system.'
-      expect(page).to have_content 'Failed to Upload.'
-    end
-  end
+  #     expect(page).to have_content 'Premium was not found in the system.'
+  #     expect(page).to have_content 'Failed to Upload.'
+  #   end
+  # end
 end
