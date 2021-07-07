@@ -89,6 +89,10 @@
   %total_responsible_amount= policy.tot_res_amt.round(2)
   - unless policy.rating_area.blank?
     %rating_area= policy.rating_area
+  - if policy.is_cobra?
+    %eligibility_event
+      %event_kind= # ask we need event
+      %event_date= policy.cobra_eligibility_date # nikil ticket 19397
 %request_submitted_timestamp= policy.created_at.iso8601 if policy.created_at
 %created_at= policy.created_at.iso8601 if policy.created_at
 - if !policy.updated_at.blank?
