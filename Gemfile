@@ -75,7 +75,7 @@ gem "haml", "~> 4.0.7"
 gem 'kaminari', '0.16.3'
 gem 'bootstrap-kaminari-views', '0.0.5'
 gem "pd_x12", "~> 1.5.4"
-gem 'carrierwave-mongoid', '0.7.1', :require => 'carrierwave/mongoid'
+gem 'carrierwave-mongoid', '1.2.0', :require => 'carrierwave/mongoid'
 gem 'devise', '3.3.0'
 gem "rsec", "~> 0.4.2"
 gem "mongoid_auto_increment", '0.1.2'
