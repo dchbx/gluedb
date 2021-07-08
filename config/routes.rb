@@ -100,6 +100,11 @@ Gluedb::Application.routes.draw do
     member do
       get :cancelterminate
       post :transmit
+      get :generate_tax_document_form
+      post :generate_tax_document
+      get :download_tax_document
+      post :upload_tax_document_to_S3
+      delete :delete_local_generated_tax_document
     end
   end
 

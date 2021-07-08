@@ -1,0 +1,12 @@
+%ul.breadcrumb
+  1095A PDF Review for  Policy:
+  = @policy.id
+.panel.panel-default
+  .panel-body
+    .row
+      .col-md-12
+        .control-group
+          = link_to "Download PDF for review", download_tax_document_policy_path(@policy, {file_name: @file_name, person_id: @person.id}), target: "_blank"
+          <br> <br>
+          = link_to "Approve and Upload", upload_tax_document_to_S3_policy_path(@policy, {file_name: @file_name, person_id: @person.id}), :class => "btn btn-primary", :method=> :post
+          = link_to "Cancel", delete_local_generated_tax_document_policy_path(@policy, {file_name: @file_name, person_id: @person.id}), :class => "btn btn-inverse", :method=> :delete

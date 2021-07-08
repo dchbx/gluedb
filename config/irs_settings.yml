@@ -1,0 +1,38 @@
+tax_document:
+
+  2014:
+    slcsp: "94506DC0390006-01"
+    new:
+      template: "1095a_template.pdf"
+    void:
+      template: "1095a_template_void.pdf"
+    catastrophic:
+      new: 
+        template: "1095a_template_catastrophic.pdf"
+      corrected: 
+        template: "1095a_template_corrected_2.pdf"
+    coverage_page_no: 3
+  2015:
+    slcsp: "94506DC0390006-01"
+    new:
+      template: "1095a_template_2015.pdf"
+    void:
+      template: "1095a_template_void_2015.pdf"
+    catastrophic:
+      template: "1095a_template_2015_catastrophic_aptc.pdf"
+    coverage_page_no: 3
+  2016:
+    slcsp: "94506DC0390006-01"
+    new:
+      template:
+        unassisted: "2016-1095A-NEW-UQHP.pdf"
+        assisted: "2016-1095A-NEW-AQHP.pdf"
+    void:
+      template: "2016-1095A-VOID.pdf"
+    coverage_page_no: 5
+  2017:
+    slcsp: "86052DC0400001-01"
+
+  documents_root_path: '/tmp/'
+  documents_folder: 'irs_notices' 
+

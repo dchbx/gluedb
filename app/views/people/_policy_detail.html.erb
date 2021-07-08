@@ -58,7 +58,9 @@
 		<%= link_to "Create CV", new_change_vocabulary_path(p, {:change_vocabulary => {:policy_id => p.id}}), :class => "btn btn-primary" %>
 		<p></p>
 		<%= link_to "Cancel / Term", cancelterminate_policy_path(p), :class => "btn btn-inverse" %>
-	</div>
+    <p></p>
+    <%= link_to "1095A Document", generate_tax_document_form_policy_path(p, {person_id: @person.id}), :class => "btn btn-primary" %>
+  </div>
 	<% end %>
 </div>
 

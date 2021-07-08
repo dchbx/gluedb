@@ -73,4 +73,116 @@ class PoliciesController < ApplicationController
 	  end
   end
 
+  def generate_tax_document
+    @policy = Policy.find(params[:id])
+    @person = Person.find(params[:person_id])
+
+    tax_doc_params = {policy_id: params[:id],
+                      type:params[:type],
+                      void_active_policy_ids: void_policy_ids(params[:void_active_policy_ids]),
+                      void_cancelled_policy_ids: void_policy_ids(params[:void_cancelled_policy_ids]),
+                      npt: params[:npt] == "1" ? true : false}
+
+    if @policy.has_responsible_person?
+      if params[:responsible_person_ssn].present?
+        tax_doc_params[:responsible_party_ssn] = params[:responsible_person_ssn]
+      end
+
+      if params[:responsible_person_dob].present?
+        tax_doc_params[:responsible_party_dob] = Date.strptime(params[:responsible_person_dob], "%m/%d/%Y")
+      end
+    end
+
+
+    @file_name = generate_1095A_pdf(tax_doc_params)  #call doc generation service
+
+    if params[:preview] != "1"
+      begin
+        if upload_to_s3(params[:file_name], "bucket_name")
+          delete_1095A_pdf(params[:file_name])
+          redirect_to person_path(@person), :flash => { :notice=> "1095A pdf uploaded." }
+          return
+        else
+          raise("File upload failed")
+        end
+      rescue Exception => e
+          redirect_to person_path(@person), :flash => { :error=> "Could not upload file. #{e.message}" }
+      end
+    end
+  end
+
+  def download_tax_document
+    if params[:file_name].blank?
+      redirect_to generate_tax_document_form_policy_path(Policy.find(params[:id]), {person_id: Person.find(params[:person_id])}), :flash => { :error=> "Could not generate preview. No file name present in URL. Please try again." }
+      return
+    end
+    send_file(params[:file_name], :type => 'application/pdf', :disposition => 'inline')
+  end
+
+  def upload_tax_document_to_S3
+    if params[:file_name].blank? || params[:id].blank? || params[:person_id].blank?
+      redirect_to generate_tax_document_form_policy_path(Policy.find(params[:id]), {person_id: Person.find(params[:person_id])}), :flash => { :error=> "Could not upload document. Request missing essential parameters. Please try again." }
+      return
+    end
+
+    person = Person.find(params[:person_id])
+
+    begin
+      if upload_to_s3(params[:file_name], "bucket_name")
+        delete_1095A_pdf(params[:file_name])
+        redirect_to person_path(person), :flash => { :notice=> "1095A PDF queued for upload and storage." }
+        return
+      else
+        raise("File upload failed")
+      end
+    rescue Exception => e
+      redirect_to person_path(person), :flash => { :error=> "Could not upload file. #{e.message}" }
+    end
+  end
+
+  def generate_tax_document_form
+    @policy = Policy.find(params[:id])
+    @person = Person.find(params[:person_id])
+  end
+
+  def delete_local_generated_tax_document
+    person = Person.find(params[:person_id])
+
+    if params[:file_name].blank?
+      redirect_to person_path(person), :flash => { :notice=> "Could not delete 1095A PDF. Request parameter missing." }
+      return
+    end
+
+    begin
+      if delete_1095A_pdf(params[:file_name])
+        redirect_to person_path(person), :flash => { :notice=> "Deleted the generated 1095A PDF." }
+        return
+      else
+        raise
+      end
+    rescue Exception => e
+      redirect_to person_path(person), :flash => { :error=> "Could not delete 1095A PDF #{e.message}" }
+    end
+  end
+
+
+  private
+
+  def void_policy_ids(policy_ids_string)
+    return [] if policy_ids_string.blank?
+    policy_ids_string.gsub(" ", "").split(",").compact
+  end
+
+  def upload_to_s3(file_name, bucket_name)
+      true
+  end
+
+  def delete_1095A_pdf(file_name)
+    File.delete(file_name)
+  end
+
+  def generate_1095A_pdf(params)
+    params[:type] = 'new' if params[:type] == 'original'
+    Generators::Reports::IrsYearlySerializer.new(params).generate_notice
+  end
 end

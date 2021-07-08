@@ -28,6 +28,18 @@ $(document).ready(function() {
     }
   });
 
+  $("#1095A_generation_form #void-policy-ids").hide();
+
+  $("#1095A_generation_form #1095A_generation_form_error").hide();
+
+  $("#1095A_generation_form input:radio[name='type']").change(function(){
+    if(this.value == 'void' && this.checked){
+      $("#1095A_generation_form #void-policy-ids").show();
+    }else{
+      $("#1095A_generation_form #void-policy-ids").hide();
+    }
+  });
+
   if(typeof autocomplete_items === 'undefined')
     return;
 

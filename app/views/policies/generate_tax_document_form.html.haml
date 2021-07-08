@@ -1,0 +1,83 @@
+%ul.breadcrumb
+  Generate 1095A Document for Policy:
+  = @policy.id
+= form_tag generate_tax_document_policy_path(@policy, {person_id:@person.id}), :method => "post", :id => '1095A_generation_form', :onsubmit => "return validate_1095A_form()"  do
+  .panel.panel-default
+    .panel-body
+      .row{id:"1095A_generation_form_error", class:"alert alert-danger"}
+        .col-md-12
+          .control-group
+          = label_tag "For Responsible Party either SSN or DOB HAS to be provided."
+      .row
+        .col-md-12
+          .control-group
+            Type
+          .control-group
+            = radio_button_tag :type, "new", checked: true
+            = label_tag "Original"
+          .control-group
+            = radio_button_tag :type, "void"
+            = label_tag "Void"
+            .row{id:"void-policy-ids"}
+              .col-md-12
+                .control-group
+                  = label_tag "Active Policy IDs (comma separated list)"
+                  = text_field_tag :void_active_policy_ids, nil, maxlength:200
+              .col-md-12
+                .control-group
+                  = label_tag "Cancelled Policy IDs (comma separated list)"
+                  = text_field_tag :void_cancelled_policy_ids, nil, maxlength:200
+          .control-group
+            = radio_button_tag :type, "corrected"
+            = label_tag "Corrected"
+      - if @policy.has_responsible_person?
+        %br
+        .row
+          .col-md-12
+            .control-group
+              Responsible Party
+          .col-md-12
+            .control-group
+              .ul
+                .li
+                  = label_tag "SSN"
+                .li
+                  = text_field_tag :responsible_person_ssn, nil, maxlength: 9
+              .ul
+                .li
+                  = label_tag "DOB"
+                  .col-md-2.offset-1.input-group
+                    %span.input-group-btn
+                      %button.btn.disabled
+                        %span.fui-calendar
+                    = text_field_tag :responsible_person_dob, nil, class: 'form-control date_picker'
+      %br
+      .row
+        .col-md-12
+          .control-group
+            = label_tag "Non-Payment Termination?"
+            = check_box_tag :npt
+      .row
+        .col-md-12
+          .control-group
+            = label_tag "Show preview? "
+            = check_box_tag :preview, 1, true
+      .row
+        .col-md-2
+          .form_actions
+            = submit_tag 'Submit', class: 'btn btn-inverse'
+
+:javascript
+  function validate_1095A_form() {
+    var return_value = false;
+
+    if ($("#1095A_generation_form #responsible_person_ssn").val() == "" && $("#1095A_generation_form #responsible_person_dob").val() == ""){
+        $("#1095A_generation_form #1095A_generation_form_error").show();
+        return_value = false;
+    }else {
+        $("#1095A_generation_form #1095A_generation_form_error").hide();
+        return_value = true;
+    }
+
+    return return_value
+  }
